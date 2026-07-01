@@ -1,0 +1,8 @@
+# Development / testing dependencies.
+# Install with:  pip install -r requirements-dev.txt
+# (also install runtime deps: pip install -r requirements.txt)
+
+-r requirements.txt
+
+pytest>=7.4
+pytest-timeout>=2.2

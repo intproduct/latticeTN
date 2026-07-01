@@ -1,0 +1,119 @@
+# NUMERICAL_REPORT.md
+
+Numerical validation of the latticeTN autograd tensor-network library against
+exact diagonalization (ED) for the finite open-boundary 1D spin-1/2
+antiferromagnetic Heisenberg chain.
+
+## Physics convention
+
+```
+H = J * sum_{i=0}^{N-2} (Sx_i Sx_{i+1} + Sy_i Sy_{i+1} + Sz_i Sz_{i+1})
+S = sigma / 2        (spin convention, NOT Pauli)
+J = 1.0
+boundary = open
+dtype   = torch.complex128
+device  = cpu
+```
+
+For open spin-1/2 chains the maximum MPS bond dimension needed to represent a
+state exactly is `2**(N//2)`; with `chi >= 2**(N//2)` the variational ansatz is
+exact-representable, so the variational energy can reach the exact ground energy
+`E0` to machine precision.
+
+Reference ground-state energies (dense ED via `numpy.linalg.eigh`):
+
+| N  | exact E0 (ED)   | E0 / N        | Bethe E0/N (thermodynamic) |
+|----|-----------------|---------------|----------------------------|
+| 2  | -0.7500000000   | -0.3750000000 | -0.4431471806              |
+| 4  | -1.6160254038   | -0.4040063509 | -0.4431471806              |
+| 6  | -2.4935771339   | -0.4155961890 | -0.4431471806              |
+| 8  | -3.3749325987   | -0.4218665748 | -0.4431471806              |
+
+E0/N approaches the Bethe-ansatz value `1/4 - ln(2)` from above, as expected.
+
+## Verification pipeline
+
+The MPS-MPO energy path (`latticetn.MPS.energy_with_MPO`) computes the Rayleigh
+quotient `<psi|H|psi> / <psi|psi>` and is fully autograd-differentiable (no
+`.detach()/.data/.item()/no_grad` inside the energy computation). It is checked
+against the dense formula `psi.conj() @ H @ psi / (psi.conj() @ psi)` and matches
+to machine precision (see `tests/test_energy_rayleigh.py`,
+`tests/test_heisenberg_energy_dense_compare.py`). The Heisenberg and TFI MPO
+`.to_dense()` match the dense Hamiltonians exactly
+(`tests/test_heisenberg_mpo_dense.py`, `tests/test_tfi_mpo_dense.py`).
+
+## Variational validation table
+
+Solver: `scripts/run_heisenberg_small.py` (Adam on the Rayleigh energy,
+in-place Frobenius normalization performed OUTSIDE the autograd energy path,
+fixed seed, CPU, complex128). Variational principle verified: `final_E >= E0`
+within tolerance (`below_ground = false`) in every case. The variational energy
+never falls below the exact ground energy.
+
+| N | chi | exact ground E0 | variational initial E | variational final E | absolute error | relative error | command                                                                                                       | pass/fail |
+|---|-----|-----------------|-----------------------|---------------------|----------------|----------------|---------------------------------------------------------------------------------------------------------------|-----------|
+| 2 | 2   | -0.7500000000   | -0.2502680197         | -0.7499999996       | 4.30e-10       | 5.73e-10       | `python scripts/run_heisenberg_small.py --N 2 --chi 2 --steps 200 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
+| 4 | 4   | -1.6160254038   | -0.0781043985         | -1.6160254038       | 3.99e-13       | 2.47e-13       | `python scripts/run_heisenberg_small.py --N 4 --chi 4 --steps 300 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
+| 6 | 8   | -2.4935771339   | -0.3862184141         | -2.4935714569       | 5.68e-06       | 2.28e-06       | `python scripts/run_heisenberg_small.py --N 6 --chi 8 --steps 300 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
+
+Notes:
+- N=4, chi=4 reaches `E0` to ~1e-13 (chi = 2^(N/2) is exact-representable and
+  300 Adam steps fully converge).
+- N=6, chi=8 reaches `E0` to ~6e-6 in 300 steps (chi = 2^(N/2) is
+  exact-representable; the residual is optimizer convergence, not an
+  expressivity gap, and tightens with more steps).
+
+## Test suite (`scripts/validation_score.py`)
+
+All required fast tests pass (exit 0):
+
+```
+python scripts/validation_score.py --fast     # Score: PASS  (exit 0)
+pytest -q tests/test_reference_models.py tests/test_mps_dense.py tests/test_mpo_dense.py \
+       tests/test_tfi_mpo_dense.py tests/test_energy_rayleigh.py \
+       tests/test_heisenberg_mpo_dense.py tests/test_heisenberg_energy_dense_compare.py \
+       tests/test_heisenberg_variational_smoke.py
+# 36 passed
+```
+
+`--full` additionally runs the small Heisenberg solve:
+
+```
+python scripts/validation_score.py --full    # exit 0
+# -> python scripts/run_heisenberg_small.py --N 6 --chi 8 --steps 300 --lr 1e-2 --seed 0 --device cpu
+```
+
+## Known limitations
+
+- **System size**: validated only for N <= 8 (ED) and N <= 6 (variational) on
+  CPU. Larger N requires denser ED memory (2^N) and longer/2-site optimization.
+- **Optimizer**: single-site full-tensor Adam with Frobenius re-normalization.
+  Convergence slows for larger N / smaller chi; no subspace expansion or 2-site
+  DMRG sweep is implemented yet.
+- **Boundary**: only open boundary conditions. Periodic boundary MPS/MPO is not
+  in the validation path (prototype code in `AD_MPS*.py` is preserved but not
+  validated).
+- **dtype/device**: complex128, CPU only. No CUDA in tests.
+- **Models**: Heisenberg (XXX) and TFI MPOs are validated against dense
+  references. XXZ / longer-range / higher-spin models are out of scope for this
+  stage.
+- **TFI convention**: `H_TFI = -J Sz Sz - h sum_i Sx` (spin convention), chosen
+  for consistency with the Heisenberg spin convention. The prototype
+  `AD_MPS_fixed.generate_TFI_MPO` uses Pauli matrices; the two are not
+  interchangeable (see `docs/CLAUDE_PROGRESS.md`).
+
+## Extending to larger systems / other models
+
+- **Larger N / DMRG**: implement a 2-site sweep with SVD-based bond truncation in
+  `latticetn/` (reuse `MPS.to_dense`, `MPO.to_dense`, `energy_with_MPO` as the
+  building blocks). Add a fixed-chi truncation and a Davidson/Lanczos local
+  eigensolver on the 2-site effective object. This keeps `chi << 2^(N/2)`
+  tractable for N up to hundreds.
+- **XXZ**: add `generate_xxz(Jz, Jxy)` to `latticetn/mpo.py` by reusing the same
+  D=5 nearest-neighbor automaton with anisotropic `Sz Sz` vs `Sx Sx + Sy Sy`
+  coefficients. Validate against a dense `xxz_dense` in `operators.py`.
+- **TFI ground-state scan**: reuse `generate_tfi` + the variational solver to
+  scan `h` and locate the critical point `h_c = 0.5` (in the spin convention
+  `H = -J Sz Sz - h Sx`, the critical transverse field is `h_c = J/2`).
+- **Higher spin**: generalize `spin_operators` (already parameterized by
+  dimension) and the MPO generator; the contraction code is spin-agnostic.

@@ -1,0 +1,76 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Test / type / lint caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.cache
+nosetests.xml
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# --- Environments / secrets ---
+.env
+.env.*
+secrets/
+*.pem
+*.key
+
+# --- Local Claude / agent config (machine-private) ---
+.claude/settings.local.json
+.claude/projects/
+.claude/memory/
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# --- Temporary logs / large scratch outputs ---
+*.log
+logs/
+tmp/
+scratch/
+*.tmp
+# JSON results emitted by fast score runs (regenerated on demand)
+docs/benchmark_fast_results.json
+
+# But DO keep the formal reports (these are NOT ignored):
+!docs/*_REPORT.md
+!docs/*_PROTOCOL.md
+!docs/*_SPEC.md

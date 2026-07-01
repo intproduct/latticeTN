@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/validation_score.py --fast)",
+      "Bash(python scripts/validation_score.py --full)",
+      "Bash(bash scripts/run_fast_validation.sh)",
+      "Bash(pytest -q*)",
+      "Bash(python -m pytest -q*)",
+      "Bash(git diff*)",
+      "Bash(git status*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(curl * | *)",
+      "Bash(wget * | *)"
+    ]
+  }
+}
