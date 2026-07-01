@@ -1,6 +1,6 @@
 # Repository Status
 
-Last updated: 2026-07-01 (Repo Prep)
+Last updated: 2026-07-02 (Stage 5B two-site AD)
 
 ## What this repository is
 
@@ -22,6 +22,7 @@ latticetn/            # the importable package (AD mainline + baselines)
   canonical.py        # SVD/QR canonicalization + compression (Stage 3A)
   ad_variational.py   # Stage 4R global AD-MPS            [AD MAINLINE]
   ad_local.py         # Stage 5A AD local-tensor optim.   [AD MAINLINE]
+  ad_two_site.py      # Stage 5B two-site AD local optim. [AD MAINLINE]
   dmrg.py             # Stage 4A/4B classical DMRG        [REFERENCE BASELINE]
   lanczos.py          # Stage 4B Krylov local eigensolver [REFERENCE BASELINE]
 scripts/              # *_score.py runners + run_*.py smoke/generators
@@ -48,10 +49,12 @@ These implement the primary solver and its differentiable loss path:
 | `latticetn.contractions` | differentiable native contractions; `rayleigh_energy_native` = the loss. |
 | `latticetn.ad_variational` | **Stage 4R** global AD-MPS (`ADVariationalMPS`, `train_ad_mps`). |
 | `latticetn.ad_local` | **Stage 5A** AD local-tensor optimization (`ADLocalOptimizer`, `train_ad_local`). |
+| `latticetn.ad_two_site` | **Stage 5B** two-site AD local-tensor optimization (`ADTwoSiteOptimizer`, `train_ad_two_site`); optional bond growth via post-step SVD split. |
 
 Loss-path cleanliness (no `detach`/`.data`/`no_grad`/unnecessary `.item`, no
 `eigh`/`svd`/`qr`, no `dmrg`/`lanczos`) is AST-enforced by
-`tests/test_ad_gauge_loss_integrity.py` and `tests/test_ad_local_opt_policy.py`.
+`tests/test_ad_gauge_loss_integrity.py`, `tests/test_ad_local_opt_policy.py`,
+and `tests/test_ad_two_site_policy.py`.
 
 ## Reference-baseline modules (NOT the mainline)
 
@@ -74,8 +77,9 @@ All run CPU-only, `torch.complex128`.
 | `python scripts/contraction_score.py --fast` | PASS |
 | `python scripts/ad_variational_score.py --fast` | PASS |
 | `python scripts/ad_local_opt_score.py --fast` | PASS |
+| `python scripts/ad_two_site_score.py --fast` | PASS |
 
-Default `pytest -q` collects **179 tests, all under `tests/`**; nothing under
+Default `pytest -q` collects **215 tests, all under `tests/`**; nothing under
 `legacy/` or `examples/` is collected.
 
 ## Legacy / archived code
@@ -93,5 +97,6 @@ caution. See `legacy/README.md`.
 - No remote git repository; the repo is prepared for a local `git init` and a
   later (manual) remote push. See the suggested commands in the Repo-Prep
   handoff.
-- Future stages (Stage 5B two-site AD, GPU AD benchmark, XXZ/TFI, TEBD/TDVP) are
-  described in `ROADMAP.md` but not started.
+- Future stages (Stage 5C GPU AD benchmark, XXZ/TFI, TEBD/TDVP) are described in
+  `ROADMAP.md` but not started. Stage 5B (two-site AD local optimization with
+  optional bond growth) is **done**.

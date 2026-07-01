@@ -19,15 +19,20 @@ solvers stay reference baselines; the loss path stays autograd-clean.**
 
 ## Planned stages
 
-### Stage 5B — Two-site AD local optimization (next)
+### Stage 5B — Two-site AD local optimization (DONE)
 
 Extend Stage 5A's AD local-tensor optimization to a **two-site** active window:
-train a fused two-site tensor by autograd on the differentiable Rayleigh
-quotient, then move the orthogonality center and optionally **grow / compress**
-the bond by projecting the merged tensor (Stage 3A `svd_compress` as a
-post-step bond-growing projection). This is the AD analogue of two-site DMRG,
-with **gradient descent replacing the local eigensolver**. SVD here is a
-post-step projection/compression tool, **not** the solver.
+at each bond contract the two adjacent site tensors into a single trainable
+two-site center tensor `Θ`, train it on the differentiable local Rayleigh
+quotient `E(Θ)=<Θ|H_eff|Θ>/<Θ|Θ>` by autograd (`loss.backward()` + Adam/LBFGS),
+then split `Θ` back into two site tensors by SVD with optional
+`max_bond_dim`/`cutoff` truncation, and sweep left-to-right / right-to-left.
+This is the AD analogue of two-site DMRG, with **gradient descent replacing the
+local eigensolver**. SVD/QR here are post-step split / compression / inter-bond
+gauge fixing, **not** the solver. Implemented by `latticetn/ad_two_site.py`;
+scored by `scripts/ad_two_site_score.py --fast`; documented in
+`docs/AD_TWO_SITE_SPEC.md`, `docs/AD_TWO_SITE_PROTOCOL.md`,
+`docs/AD_TWO_SITE_REPORT.md`.
 
 ### Stage 5C — GPU AD benchmark
 
