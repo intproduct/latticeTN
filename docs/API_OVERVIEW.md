@@ -116,6 +116,23 @@ update — **gradient descent, not a local eigensolver**.
 - `stabilization` is **optional post-step stabilization only**, under `no_grad`
   mutating `.data` — never the solver, never in the loss path.
 
+## `latticetn.ad_two_site` — Stage 5B two-site AD local-tensor optimization  🔹 AD MAINLINE
+
+Trains **one two-site block `Θ` at a time** on the differentiable local
+Rayleigh quotient `E(Θ)=<Θ|H_eff|Θ>/<Θ|Θ>`, sweeping the active bond and
+optionally growing / truncating the bond at the SVD split. The autograd
+analogue of two-site DMRG — **gradient descent on `Θ`, not a local
+eigensolver**.
+
+- `ADTwoSiteOptimizer(mps, mpo, bond)` — two-site mixed-canonical; only `Θ` is
+  trainable. `.energy()`/`.loss()` → the differentiable local Rayleigh quotient
+  (pure einsum on `Θ` + frozen constant MPO environments).
+  `.split(max_bond_dim, cutoff, direction)` → SVD split of `Θ` back into two
+  site tensors with optional truncation (compression, **not** the solver).
+- `train_ad_two_site(mps, mpo, num_sweeps, local_steps, lr, optimizer="lbfgs",
+  max_bond_dim, cutoff, stabilization)` → history dict + per-sweep/per-bond
+  records (`energy_history`, `bond_dim_history`, `truncation_error_history`).
+
 ## `latticetn.dmrg` — classical two-site DMRG (Stage 4A/4B)  ⚠️ REFERENCE BASELINE
 
 Classical two-site DMRG with a dense or Lanczos local eigensolver. **Not**
@@ -134,6 +151,19 @@ solver. **Not** imported by the AD modules.
 
 - `lanczos_lowest_eigenpair(apply, dim, dtype, ...)` → lowest eigenpair.
 - `ritz_quotient(apply, v)` → Ritz quotient diagnostic.
+
+---
+
+## Benchmark / score scripts (Stage 6A)
+
+- `scripts/run_ad_gpu_benchmark.py` — CPU/GPU benchmark of the three AD
+  mainline solvers (global AD-MPS, one-site AD, two-site AD) with exact / DMRG
+  reference baselines. GPU is opt-in (`LATTICETN_RUN_GPU=1`, uses `cuda:0`;
+  clean-skips if CUDA unavailable). Writes `docs/AD_GPU_BENCHMARK_REPORT.md`
+  + JSON results. No AD loss path is modified; it only calls `train_ad_*` with
+  device-placed MPS/MPO.
+- `scripts/ad_gpu_benchmark_score.py` — Stage 6A score: runs the three
+  benchmark test files, regenerates the report, checks required terms.
 
 ---
 

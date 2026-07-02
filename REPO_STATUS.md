@@ -1,6 +1,6 @@
 # Repository Status
 
-Last updated: 2026-07-02 (Stage 5B two-site AD)
+Last updated: 2026-07-02 (Stage 6A CPU/GPU AD benchmark)
 
 ## What this repository is
 
@@ -78,9 +78,11 @@ All run CPU-only, `torch.complex128`.
 | `python scripts/ad_variational_score.py --fast` | PASS |
 | `python scripts/ad_local_opt_score.py --fast` | PASS |
 | `python scripts/ad_two_site_score.py --fast` | PASS |
+| `python scripts/ad_gpu_benchmark_score.py --fast` | PASS (CPU-only by default; GPU opt-in via `LATTICETN_RUN_GPU=1`) |
 
-Default `pytest -q` collects **215 tests, all under `tests/`**; nothing under
-`legacy/` or `examples/` is collected.
+Default `pytest -q` collects **233 tests, all under `tests/`** (Stage 5B was
+215; Stage 6A adds three benchmark test files); nothing under `legacy/` or
+`examples/` is collected.
 
 ## Legacy / archived code
 
@@ -97,6 +99,6 @@ caution. See `legacy/README.md`.
 - No remote git repository; the repo is prepared for a local `git init` and a
   later (manual) remote push. See the suggested commands in the Repo-Prep
   handoff.
-- Future stages (Stage 5C GPU AD benchmark, XXZ/TFI, TEBD/TDVP) are described in
-  `ROADMAP.md` but not started. Stage 5B (two-site AD local optimization with
-  optional bond growth) is **done**.
+- Future stages (XXZ/TFI, TEBD/TDVP) are described in `ROADMAP.md` but not
+  started. Stage 5C (GPU AD benchmark, shipped as **Stage 6A**) and Stage 5B
+  (two-site AD local optimization with optional bond growth) are **done**.

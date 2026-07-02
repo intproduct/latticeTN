@@ -34,12 +34,16 @@ scored by `scripts/ad_two_site_score.py --fast`; documented in
 `docs/AD_TWO_SITE_SPEC.md`, `docs/AD_TWO_SITE_PROTOCOL.md`,
 `docs/AD_TWO_SITE_REPORT.md`.
 
-### Stage 5C — GPU AD benchmark
+### Stage 5C — GPU AD benchmark (DONE, shipped as Stage 6A)
 
 An **opt-in** GPU benchmark of the global / local AD-MPS solvers at larger N and
-chi, respecting the project GPU policy (name-matched device selection, never
-`cuda:0` by default). Default tests stay CPU-only. Adds a `gpu_ad_score.py` and
-report; never coupled to the default fast scores.
+chi, respecting the project GPU policy. Default tests stay CPU-only. This was
+**implemented as Stage 6A** (`scripts/ad_gpu_benchmark_score.py` +
+`scripts/run_ad_gpu_benchmark.py`, docs `AD_GPU_BENCHMARK_*`): it benchmarks
+the three AD mainline solvers (global AD-MPS, one-site AD, two-site AD) on CPU
+and the machine's single GPU (`cuda:0` when `LATTICETN_RUN_GPU=1` and CUDA is
+available; clean-skip otherwise), with DMRG / exact diagonalization as
+reference baselines only. It is never coupled to the default fast scores.
 
 ### Stage 6 — Model extensions (XXZ / TFI)
 
