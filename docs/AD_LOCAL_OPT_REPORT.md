@@ -20,8 +20,8 @@ This stage's mainline is **AD local-tensor optimization**: train one center tens
 
 | N | chi | sweeps | local_steps | exact E0 | AD-local final E | abs err | tol | below ground | max bond | center grad not-None | center grad finite | runtime_s | pass |
 |---:|---:|---:|---:|---:|---:|---:|---:|:---:|---:|:---:|:---:|---:|:---|
-| 4 | 8 | 4 | 20 | -1.6160254038 | -1.6160254037 | 4.19e-11 | 1e-08 | False | 4 | True | True | 3.09 | PASS |
-| 6 | 8 | 4 | 20 | -2.4935771339 | -2.4935771330 | 8.91e-10 | 1e-05 | False | 8 | True | True | 0.92 | PASS |
+| 4 | 8 | 4 | 20 | -1.6160254038 | -1.6160254037 | 4.19e-11 | 1e-08 | False | 4 | True | True | 3.26 | PASS |
+| 6 | 8 | 4 | 20 | -2.4935771339 | -2.4935771330 | 8.91e-10 | 1e-05 | False | 8 | True | True | 0.84 | PASS |
 
 ## Global AD-MPS comparison (N=6)
 

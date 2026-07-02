@@ -1,6 +1,6 @@
 # Repository Status
 
-Last updated: 2026-07-02 (Stage 6A CPU/GPU AD benchmark)
+Last updated: 2026-07-02 (Stage 6B bilingual docs + tutorials + MkDocs skeleton)
 
 ## What this repository is
 
@@ -102,3 +102,8 @@ caution. See `legacy/README.md`.
 - Future stages (XXZ/TFI, TEBD/TDVP) are described in `ROADMAP.md` but not
   started. Stage 5C (GPU AD benchmark, shipped as **Stage 6A**) and Stage 5B
   (two-site AD local optimization with optional bond growth) are **done**.
+  Stage 6B (bilingual docs + tutorials + MkDocs skeleton) is **done** — no
+  algorithm/physics/threshold changes; the user-facing docs now include a
+  computation-guide `USER_GUIDE.md`, a Chinese `USER_GUIDE.zh-CN.md`, six
+  bilingual tutorials, and an optional local MkDocs site
+  (`mkdocs.yml` + `requirements-docs.txt`).

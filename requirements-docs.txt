@@ -1,0 +1,11 @@
+# Doc-site build dependencies for latticeTN.
+# Install with:  pip install -r requirements-docs.txt
+# Then preview locally with:  mkdocs serve
+#
+# These are OPTIONAL: the docs are plain Markdown and remain readable on
+# GitHub directly. MkDocs only builds the navigation-enhanced site. Nothing
+# here is required to run the library, the tests, or the scores; it never
+# enters the runtime or dev dependency sets.
+
+mkdocs>=1.6
+mkdocs-material>=9.5

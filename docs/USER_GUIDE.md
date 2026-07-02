@@ -90,6 +90,24 @@ eigensolver exist for **correctness comparison and benchmarking**, not as the
 project's solver. They live behind their own opt-in score scripts and are never
 imported by the AD modules.
 
+### 2.4 Tutorials (step-by-step, runnable)
+
+This guide is the reference manual; for hands-on, copy-pasteable walkthroughs
+with expected output and common errors, see the tutorials (also in
+[中文](USER_GUIDE.zh-CN.md)):
+
+| # | Tutorial | Covers |
+|---|---|---|
+| 01 | [Quickstart (Heisenberg)](tutorials/01_quickstart_heisenberg.md) | build MPS+MPO, evaluate the differentiable energy, compare to ED |
+| 02 | [Global AD-MPS](tutorials/02_global_ad_mps.md) | train all tensors at once (Adam) |
+| 03 | [One-site AD local](tutorials/03_one_site_ad_local.md) | center-tensor sweep (LBFGS), QR center movement |
+| 04 | [Two-site AD local](tutorials/04_two_site_ad_local.md) | two-site `Θ` block, bond growth via SVD split |
+| 05 | [CPU/GPU benchmark](tutorials/05_cpu_gpu_benchmark.md) | opt-in GPU parity + speedup |
+| 06 | [Add a new model](tutorials/06_add_new_model.md) | dense ref → MPO → tests → AD solver → benchmark |
+
+You can also browse them as a local site: `pip install -r requirements-docs.txt
+&& mkdocs serve` (see `mkdocs.yml`).
+
 ---
 
 ## 3. Minimal example: Heisenberg MPO + energy
@@ -182,6 +200,53 @@ appended per sweep. `sweeps` records per-sweep direction and energy.
 
 For the lower-level interface (`ADLocalOptimizer`, `.move_center`,
 `.set_center`), see [`API_OVERVIEW.md`](API_OVERVIEW.md).
+
+---
+
+## 5b. Two-site AD local optimization (Stage 5B)
+
+Two-site AD extends the local sweep to a **two-site block**: contract two
+adjacent site tensors into a single trainable `Θ(l, s_i, s_{i+1}, r)`, train it
+on the differentiable local Rayleigh quotient `E(Θ)=<Θ|H_eff|Θ>/<Θ|Θ>`, then
+split `Θ` back by SVD with optional `max_bond_dim`/`cutoff`. This is the
+autograd analogue of two-site DMRG — **gradient descent on `Θ`, not a local
+eigensolver** — and it lets the bond dimension **grow or truncate** as the
+sweep proceeds.
+
+```python
+import torch as tc
+from latticetn.mps import MPS
+from latticetn.mpo import MPO
+from latticetn.ad_two_site import train_ad_two_site
+
+tc.manual_seed(0)
+mps = MPS(6, 2, 8, dtype=tc.complex128)
+mpo = MPO.from_bonds(6, 2, dtype=tc.complex128, device="cpu").generate_heisenberg(J=1.0)
+
+res = train_ad_two_site(mps, mpo,
+                        num_sweeps=4, local_steps=20, lr=1.0,
+                        optimizer="lbfgs",
+                        max_bond_dim=8, cutoff=None)   # optional bond growth / cap
+print("final E =", res["final_energy"])
+print("bond dims =", res["final_bond_dims"], "max =", res["max_bond"])
+```
+
+**What is the optimizer vs. what is auxiliary:**
+- The **optimizer** is `loss.backward()` + a torch optimizer step on the single
+  two-site `Θ` tensor (a 4-axis `nn.Parameter`).
+- `H_eff` is built from **frozen, detached** left/right MPO environments + the
+  two MPO tensors; `Θ` is the only trainable leaf. The loss is a pure einsum.
+- The SVD in `split()` is **post-step compression** (under `no_grad` on detached
+  data); the inter-bond QR re-canonicalization is **gauge fixing**. Neither is
+  the solver.
+- Because the rest of the chain is orthonormal, `E(Θ)` equals the global
+  Rayleigh quotient — minimizing it lowers the global energy (two-site
+  variational principle).
+
+Use two-site AD when you want **bond adaptivity** (the ansatz chooses its own χ
+via the SVD split). Use one-site AD (§5) when you want a fixed χ. Both reach
+machine precision on small N; see tutorial
+[04](tutorials/04_two_site_ad_local.md).
 
 ---
 
@@ -290,6 +355,10 @@ by DMRG's `solver="lanczos"`. It is a reference tool, **not** the AD solver.
 ---
 
 ## 9. Adding a new model
+
+For a full runnable walkthrough (dense ref → MPO → MPO-to-dense test → native
+energy test → AD solver → benchmark, with code and expected output), see
+tutorial [06 — Add a new model](tutorials/06_add_new_model.md). Summary:
 
 To add, say, an XXZ chain:
 

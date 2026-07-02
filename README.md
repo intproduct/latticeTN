@@ -42,6 +42,7 @@ MPS parameters (trainable nn.Parameter)
 | Stage 5A | AD local-tensor optimization (center-tensor sweep) | done |
 | Stage 5B | Two-site AD local optimization (optional bond growth) | done |
 | Stage 6A | CPU/GPU AD solver benchmark (opt-in GPU) | done |
+| Stage 6B | Bilingual docs, tutorials, MkDocs skeleton | done |
 
 See `ROADMAP.md` for future directions (XXZ/TFI extensions, TEBD/TDVP). The
 Stage 5C GPU AD benchmark slot from earlier drafts is **implemented as Stage
@@ -117,11 +118,16 @@ print("final E =", res["final_energy"])
 
 ## Where to go next
 
-- **`docs/USER_GUIDE.md`** — the detailed, user-facing guide (install, concepts,
+- **`docs/USER_GUIDE.md`** — the detailed, user-facing guide (EN) (install, concepts,
   examples, observables, canonicalization, adding new models, running scores,
-  common pitfalls).
+  common pitfalls). 中文版：`docs/USER_GUIDE.zh-CN.md`.
+- **`docs/tutorials/`** (EN) and **`docs/tutorials.zh-CN/`** (中文) — step-by-step,
+  runnable walkthroughs (quickstart, each AD solver, CPU/GPU benchmark, add a
+  new model) with expected output and common errors.
 - **`docs/API_OVERVIEW.md`** — module-by-module reference.
 - **`docs/INDEX.md`** — documentation navigation.
+- **`mkdocs.yml`** + **`requirements-docs.txt`** — optional local doc site:
+  `pip install -r requirements-docs.txt && mkdocs serve`.
 - **`REPO_STATUS.md`** — current repository state and what's mainline vs. baseline.
 - **`ROADMAP.md`** — future directions.
 

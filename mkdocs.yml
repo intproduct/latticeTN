@@ -1,0 +1,91 @@
+# MkDocs site configuration for latticeTN.
+#
+# This is a SKELETON: it organizes the existing Markdown into a navigable
+# site. It is intentionally minimal — no plugins, no custom theme overrides,
+# no GitHub Pages auto-deploy workflow. The docs remain plain Markdown and
+# are fully readable on GitHub without building the site.
+#
+# Local preview:
+#   pip install -r requirements-docs.txt
+#   mkdocs serve
+# then open http://127.0.0.1:8000
+#
+# To build a static site (optional, no deploy configured):
+#   mkdocs build            # writes static HTML to site/
+
+site_name: latticeTN — AD Tensor Network Library
+site_description: >-
+  Automatic-differentiation tensor-network library (MPS/MPO + PyTorch autograd),
+  validated on the open-boundary 1D spin-1/2 Heisenberg chain.
+site_url: https://github.com/intproduct/latticeTN
+repo_url: https://github.com/intproduct/latticeTN
+repo_name: intproduct/latticeTN
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: INDEX.md
+  - Guides:
+      - User Guide (EN): USER_GUIDE.md
+      - 用户指南 (中文): USER_GUIDE.zh-CN.md
+      - API Overview: API_OVERVIEW.md
+  - Tutorials (EN):
+      - 01 — Quickstart (Heisenberg): tutorials/01_quickstart_heisenberg.md
+      - 02 — Global AD-MPS: tutorials/02_global_ad_mps.md
+      - 03 — One-site AD local: tutorials/03_one_site_ad_local.md
+      - 04 — Two-site AD local: tutorials/04_two_site_ad_local.md
+      - 05 — CPU/GPU benchmark: tutorials/05_cpu_gpu_benchmark.md
+      - 06 — Add a new model: tutorials/06_add_new_model.md
+  - 教程 (中文):
+      - 01 — 快速开始 (Heisenberg): tutorials.zh-CN/01_快速开始_Heisenberg.md
+      - 02 — Global AD-MPS: tutorials.zh-CN/02_Global_AD_MPS.md
+      - 03 — 单点 AD 局部优化: tutorials.zh-CN/03_One_site_AD_local.md
+      - 04 — 两点 AD 局部优化: tutorials.zh-CN/04_Two_site_AD_local.md
+      - 05 — CPU/GPU benchmark: tutorials.zh-CN/05_CPU_GPU_benchmark.md
+      - 06 — 添加新模型: tutorials.zh-CN/06_添加新模型.md
+  - Policy & physics:
+      - AD Mainline Policy: AD_MAINLINE_POLICY.md
+      - Physics Spec: PHYSICS_SPEC.md
+      - Validation Protocol: VALIDATION_PROTOCOL.md
+  - Status:
+      - Documentation Index: INDEX.md
+
+# Note: README.md, ROADMAP.md, and REPO_STATUS.md live at the REPO ROOT
+# (outside docs_dir), so MkDocs does not serve them. They remain the
+# canonical entry points on GitHub. INDEX.md (the "Home" page) links to
+# all of them for site visitors.

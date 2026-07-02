@@ -13,13 +13,15 @@ The **GPU benchmark evaluates the AD mainline solvers** (global AD-MPS, one-site
 - PyTorch version: `2.12.0+cu126`
 - CUDA version: `12.6`
 - CUDA available: `True`
-- GPU device count: `1`
-- GPU name: `NVIDIA TITAN V`
-- Device used: `cuda:0`
+- GPU device count: `0`
+- GPU name: `None`
+- Device used: `None`
 - dtype: `torch.complex128`
-- `LATTICETN_RUN_GPU=1`: `True`
+- `LATTICETN_RUN_GPU=1`: `False`
 
-**GPU RAN** on `cuda:0` (the machine's single GPU; no name filtering).
+**GPU SKIPPED:** LATTICETN_RUN_GPU != 1; GPU benchmark is opt-in and was not requested.
+
+The GPU portion was not run (clean skip). The CPU benchmark ran normally; the report records CPU-only results.
 
 ## Convention
 
@@ -31,47 +33,30 @@ The **GPU benchmark evaluates the AD mainline solvers** (global AD-MPS, one-site
 
 | N | exact E0 | DMRG E | DMRG runtime_s |
 |---:|---:|---:|---:|
-| 4 | -1.6160254038 | -1.6160254038 | 0.405 |
-| 6 | -2.4935771339 | -2.4935771339 | 1.443 |
+| 4 | -1.6160254038 | -1.6160254038 | 0.364 |
+| 6 | -2.4935771339 | -2.4935771339 | 1.582 |
 
 Exact diagonalization (`numpy.linalg.eigh`) and dense DMRG are classical reference baselines; they are **not** part of the AD optimization path.
 
 ## CPU/GPU comparison — N=4, chi=4
 
-| solver | optimizer | device | final E | energy error | E / bond | runtime_s | speedup | below ground |
-|---|:---:|:---:|---:|---:|---:|---:|---:|:---:|
-| global AD-MPS | adam | cpu | -1.6160223657 | 3.04e-06 | -0.5386741219 | 5.571 | — | False |
-| global AD-MPS | adam | cuda:0 | -1.6160223657 | 3.04e-06 | -0.5386741219 | 6.391 | 8.717e-01 | False |
-| one-site AD local | lbfgs | cpu | -1.6160254037 | 4.19e-11 | -0.5386751346 | 0.298 | — | False |
-| one-site AD local | lbfgs | cuda:0 | -1.6160254037 | 4.19e-11 | -0.5386751346 | 0.855 | 3.491e-01 | False |
-| two-site AD local | lbfgs | cpu | -1.6160254036 | 1.82e-10 | -0.5386751345 | 0.113 | — | False |
-| two-site AD local | lbfgs | cuda:0 | -1.6160254036 | 1.82e-10 | -0.5386751345 | 0.313 | 3.608e-01 | False |
+| solver | optimizer | device | final E | energy error | E / bond | runtime_s | below ground |
+|---|:---:|:---:|---:|---:|---:|---:|:---:|
+| global AD-MPS | adam | cpu | -1.6160223657 | 3.04e-06 | -0.5386741219 | 5.539 | False |
+| one-site AD local | lbfgs | cpu | -1.6160254037 | 4.19e-11 | -0.5386751346 | 0.321 | False |
+| two-site AD local | lbfgs | cpu | -1.6160254036 | 1.82e-10 | -0.5386751345 | 0.124 | False |
 
-Speedup = CPU runtime / GPU runtime. **The GPU is NOT required to be faster**: small systems are overhead-dominated (host<->device transfer, short sweeps).
+_GPU portion skipped — see Device info above._
 
 ## CPU/GPU comparison — N=6, chi=8
 
-| solver | optimizer | device | final E | energy error | E / bond | runtime_s | speedup | below ground |
-|---|:---:|:---:|---:|---:|---:|---:|---:|:---:|
-| global AD-MPS | adam | cpu | -2.4934815147 | 9.56e-05 | -0.4986963029 | 7.160 | — | False |
-| global AD-MPS | adam | cuda:0 | -2.4934815147 | 9.56e-05 | -0.4986963029 | 15.294 | 4.682e-01 | False |
-| one-site AD local | lbfgs | cpu | -2.4935771330 | 8.91e-10 | -0.4987154266 | 0.889 | — | False |
-| one-site AD local | lbfgs | cuda:0 | -2.4935771330 | 8.91e-10 | -0.4987154266 | 1.876 | 4.736e-01 | False |
-| two-site AD local | lbfgs | cpu | -2.4935771330 | 8.39e-10 | -0.4987154266 | 0.228 | — | False |
-| two-site AD local | lbfgs | cuda:0 | -2.4935771330 | 8.39e-10 | -0.4987154266 | 0.688 | 3.313e-01 | False |
+| solver | optimizer | device | final E | energy error | E / bond | runtime_s | below ground |
+|---|:---:|:---:|---:|---:|---:|---:|:---:|
+| global AD-MPS | adam | cpu | -2.4934815147 | 9.56e-05 | -0.4986963029 | 6.972 | False |
+| one-site AD local | lbfgs | cpu | -2.4935771330 | 8.91e-10 | -0.4987154266 | 0.863 | False |
+| two-site AD local | lbfgs | cpu | -2.4935771330 | 8.39e-10 | -0.4987154266 | 0.263 | False |
 
-Speedup = CPU runtime / GPU runtime. **The GPU is NOT required to be faster**: small systems are overhead-dominated (host<->device transfer, short sweeps).
-
-## Speedup summary (CPU runtime / GPU runtime)
-
-| solver | N | chi | CPU runtime_s | GPU runtime_s | speedup | |CPU-GPU| energy diff |
-|---|---:|---:|---:|---:|---:|---:|
-| global AD-MPS | 4 | 4 | 5.571 | 6.391 | 8.717e-01 | 0.00e+00 |
-| one-site AD local | 4 | 4 | 0.298 | 0.855 | 3.491e-01 | 4.44e-16 |
-| two-site AD local | 4 | 4 | 0.113 | 0.313 | 3.608e-01 | 2.22e-16 |
-| global AD-MPS | 6 | 8 | 7.160 | 15.294 | 4.682e-01 | 8.88e-16 |
-| one-site AD local | 6 | 8 | 0.889 | 1.876 | 4.736e-01 | 4.44e-16 |
-| two-site AD local | 6 | 8 | 0.228 | 0.688 | 3.313e-01 | 0.00e+00 |
+_GPU portion skipped — see Device info above._
 
 ## Overall pass/fail
 
@@ -82,21 +67,9 @@ Speedup = CPU runtime / GPU runtime. **The GPU is NOT required to be faster**: s
 | global_AD-MPS_N=4_cpu_not_below_ground_(False) | True |
 | one-site_AD_local_N=4_cpu_not_below_ground_(False) | True |
 | two-site_AD_local_N=4_cpu_not_below_ground_(False) | True |
-| cpu_gpu_agree_global_AD-MPS_N4 | True |
-| gpu_not_below_ground_global_AD-MPS_N4 | True |
-| cpu_gpu_agree_one-site_AD_local_N4 | True |
-| gpu_not_below_ground_one-site_AD_local_N4 | True |
-| cpu_gpu_agree_two-site_AD_local_N4 | True |
-| gpu_not_below_ground_two-site_AD_local_N4 | True |
 | global_AD-MPS_N=6_cpu_not_below_ground_(False) | True |
 | one-site_AD_local_N=6_cpu_not_below_ground_(False) | True |
 | two-site_AD_local_N=6_cpu_not_below_ground_(False) | True |
-| cpu_gpu_agree_global_AD-MPS_N6 | True |
-| gpu_not_below_ground_global_AD-MPS_N6 | True |
-| cpu_gpu_agree_one-site_AD_local_N6 | True |
-| gpu_not_below_ground_one-site_AD_local_N6 | True |
-| cpu_gpu_agree_two-site_AD_local_N6 | True |
-| gpu_not_below_ground_two-site_AD_local_N6 | True |
 
 ## Known limitations
 

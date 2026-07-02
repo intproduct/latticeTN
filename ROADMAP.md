@@ -45,6 +45,16 @@ and the machine's single GPU (`cuda:0` when `LATTICETN_RUN_GPU=1` and CUDA is
 available; clean-skip otherwise), with DMRG / exact diagonalization as
 reference baselines only. It is never coupled to the default fast scores.
 
+### Stage 6B — Documentation, tutorials, GitHub Pages skeleton (DONE)
+
+No new algorithms. Expand the English `USER_GUIDE.md` into a computation
+guide; add a Chinese `USER_GUIDE.zh-CN.md` (design-motivation-oriented, not a
+mechanical translation); add 6 bilingual tutorials
+(`docs/tutorials/` + `docs/tutorials.zh-CN/`); add a MkDocs site skeleton
+(`mkdocs.yml` + `requirements-docs.txt`, local preview only, no GitHub Pages
+auto-deploy). Updates `INDEX`/`API_OVERVIEW`/`README`/`REPO_STATUS`. Physics
+conventions and test thresholds unchanged.
+
 ### Stage 6 — Model extensions (XXZ / TFI)
 
 Add XXZ and transverse-field Ising (TFI) Hamiltonians as

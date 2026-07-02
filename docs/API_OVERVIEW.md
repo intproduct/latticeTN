@@ -167,5 +167,9 @@ solver. **Not** imported by the AD modules.
 
 ---
 
-For usage flows, see [`USER_GUIDE.md`](USER_GUIDE.md). For the standing policy
-on what is mainline vs. baseline, see [`AD_MAINLINE_POLICY.md`](AD_MAINLINE_POLICY.md).
+For usage flows, see [`USER_GUIDE.md`](USER_GUIDE.md) (and the Chinese
+[`USER_GUIDE.zh-CN.md`](USER_GUIDE.zh-CN.md)). For step-by-step runnable
+walkthroughs, see the bilingual tutorials under
+[`tutorials/`](tutorials/) / [`tutorials.zh-CN/`](tutorials.zh-CN/). For the
+standing policy on what is mainline vs. baseline, see
+[`AD_MAINLINE_POLICY.md`](AD_MAINLINE_POLICY.md).

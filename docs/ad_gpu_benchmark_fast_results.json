@@ -7,14 +7,14 @@
     "torch_version": "2.12.0+cu126",
     "cuda_version": "12.6",
     "cuda_available": true,
-    "device_count": 1,
-    "gpu_name": "NVIDIA TITAN V",
-    "device": "cuda:0",
+    "device_count": 0,
+    "gpu_name": null,
+    "device": null,
     "dtype": "torch.complex128",
-    "env_run_gpu": true
+    "env_run_gpu": false
   },
-  "gpu_skip_reason": null,
-  "gpu_ran": true,
+  "gpu_skip_reason": "LATTICETN_RUN_GPU != 1; GPU benchmark is opt-in and was not requested.",
+  "gpu_ran": false,
   "cases": [
     {
       "N": 4,
@@ -24,7 +24,7 @@
         "optimizer": "none (numpy.linalg.eigh)",
         "N": 4,
         "final_energy": -1.616025403784439,
-        "runtime_s": 0.0011244998313486576,
+        "runtime_s": 0.0009212000295519829,
         "device": "cpu",
         "is_reference": true
       },
@@ -35,7 +35,7 @@
         "chi": 4,
         "seed": 0,
         "final_energy": -1.6160254037844384,
-        "runtime_s": 0.4049502999987453,
+        "runtime_s": 0.3643777999095619,
         "device": "cpu",
         "is_reference": true
       },
@@ -50,7 +50,7 @@
           "lr": 0.01,
           "final_energy": -1.616022365724704,
           "initial_energy": -0.07810439850125712,
-          "runtime_s": 5.571181199979037,
+          "runtime_s": 5.538597299950197,
           "device": "cpu",
           "exact_energy": -1.616025403784439,
           "energy_error": 3.038059735116505e-06,
@@ -71,7 +71,7 @@
           "stabilization": "qr",
           "final_energy": -1.6160254037425692,
           "initial_energy": -0.07810439850125708,
-          "runtime_s": 0.2984462999738753,
+          "runtime_s": 0.3206668999046087,
           "device": "cpu",
           "exact_energy": -1.616025403784439,
           "energy_error": 4.186984092768853e-11,
@@ -92,7 +92,7 @@
           "max_bond_dim": 4,
           "final_energy": -1.6160254036021768,
           "initial_energy": -0.07810439850125712,
-          "runtime_s": 0.11279569985345006,
+          "runtime_s": 0.12385019985958934,
           "device": "cpu",
           "exact_energy": -1.616025403784439,
           "energy_error": 1.82262205328243e-10,
@@ -102,94 +102,8 @@
           "diff_vs_dmrg": 1.8226153919442822e-10
         }
       ],
-      "gpu": [
-        {
-          "solver": "global AD-MPS",
-          "optimizer": "adam",
-          "N": 4,
-          "chi": 4,
-          "seed": 0,
-          "final_energy": -1.616022365724704,
-          "initial_energy": -0.0781043985012572,
-          "runtime_s": 6.391394400037825,
-          "device": "cuda:0",
-          "exact_energy": -1.616025403784439,
-          "energy_error": 3.038059735116505e-06,
-          "energy_per_bond": -0.5386741219082346,
-          "below_ground": false,
-          "dmrg_energy": -1.6160254037844384,
-          "diff_vs_dmrg": 3.0380597344503713e-06
-        },
-        {
-          "solver": "one-site AD local",
-          "optimizer": "lbfgs",
-          "N": 4,
-          "chi": 4,
-          "seed": 0,
-          "final_energy": -1.6160254037425696,
-          "initial_energy": -0.07810439850125693,
-          "runtime_s": 0.8547914999071509,
-          "device": "cuda:0",
-          "exact_energy": -1.616025403784439,
-          "energy_error": 4.186939683847868e-11,
-          "energy_per_bond": -0.5386751345808566,
-          "below_ground": false,
-          "dmrg_energy": -1.6160254037844384,
-          "diff_vs_dmrg": 4.1868730704663903e-11
-        },
-        {
-          "solver": "two-site AD local",
-          "optimizer": "lbfgs",
-          "N": 4,
-          "chi": 4,
-          "seed": 0,
-          "final_energy": -1.616025403602177,
-          "initial_energy": -0.07810439850125697,
-          "runtime_s": 0.3126691998913884,
-          "device": "cuda:0",
-          "exact_energy": -1.616025403784439,
-          "energy_error": 1.8226198328363807e-10,
-          "energy_per_bond": -0.538675134534059,
-          "below_ground": false,
-          "dmrg_energy": -1.6160254037844384,
-          "diff_vs_dmrg": 1.822613171498233e-10
-        }
-      ],
-      "speedups": [
-        {
-          "solver": "global AD-MPS",
-          "N": 4,
-          "chi": 4,
-          "cpu_runtime_s": 5.571181199979037,
-          "gpu_runtime_s": 6.391394400037825,
-          "speedup": 0.8716691305963009,
-          "cpu_final_energy": -1.616022365724704,
-          "gpu_final_energy": -1.616022365724704,
-          "cpu_gpu_energy_diff": 0.0
-        },
-        {
-          "solver": "one-site AD local",
-          "N": 4,
-          "chi": 4,
-          "cpu_runtime_s": 0.2984462999738753,
-          "gpu_runtime_s": 0.8547914999071509,
-          "speedup": 0.3491451424192837,
-          "cpu_final_energy": -1.6160254037425692,
-          "gpu_final_energy": -1.6160254037425696,
-          "cpu_gpu_energy_diff": 4.440892098500626e-16
-        },
-        {
-          "solver": "two-site AD local",
-          "N": 4,
-          "chi": 4,
-          "cpu_runtime_s": 0.11279569985345006,
-          "gpu_runtime_s": 0.3126691998913884,
-          "speedup": 0.36075091468117676,
-          "cpu_final_energy": -1.6160254036021768,
-          "gpu_final_energy": -1.616025403602177,
-          "cpu_gpu_energy_diff": 2.220446049250313e-16
-        }
-      ]
+      "gpu": [],
+      "speedups": []
     },
     {
       "N": 6,
@@ -199,7 +113,7 @@
         "optimizer": "none (numpy.linalg.eigh)",
         "N": 6,
         "final_energy": -2.493577133887926,
-        "runtime_s": 0.003748099785298109,
+        "runtime_s": 0.004260699963197112,
         "device": "cpu",
         "is_reference": true
       },
@@ -210,7 +124,7 @@
         "chi": 8,
         "seed": 0,
         "final_energy": -2.4935771338879267,
-        "runtime_s": 1.4427523000631481,
+        "runtime_s": 1.5821755998767912,
         "device": "cpu",
         "is_reference": true
       },
@@ -225,7 +139,7 @@
           "lr": 0.01,
           "final_energy": -2.493481514734435,
           "initial_energy": -0.3862184141431638,
-          "runtime_s": 7.1602290000300854,
+          "runtime_s": 6.972365100169554,
           "device": "cpu",
           "exact_energy": -2.493577133887926,
           "energy_error": 9.561915349065586e-05,
@@ -246,7 +160,7 @@
           "stabilization": "qr",
           "final_energy": -2.4935771329967498,
           "initial_energy": -0.3862184141431636,
-          "runtime_s": 0.8885552999563515,
+          "runtime_s": 0.8632505000568926,
           "device": "cpu",
           "exact_energy": -2.493577133887926,
           "energy_error": 8.911760218666132e-10,
@@ -267,7 +181,7 @@
           "max_bond_dim": 8,
           "final_energy": -2.493577133049092,
           "initial_energy": -0.3862184141431635,
-          "runtime_s": 0.2280395000707358,
+          "runtime_s": 0.2626882998738438,
           "device": "cpu",
           "exact_energy": -2.493577133887926,
           "energy_error": 8.388338912368454e-10,
@@ -277,115 +191,17 @@
           "diff_vs_dmrg": 8.388347794152651e-10
         }
       ],
-      "gpu": [
-        {
-          "solver": "global AD-MPS",
-          "optimizer": "adam",
-          "N": 6,
-          "chi": 8,
-          "seed": 0,
-          "final_energy": -2.493481514734436,
-          "initial_energy": -0.3862184141431638,
-          "runtime_s": 15.294195299968123,
-          "device": "cuda:0",
-          "exact_energy": -2.493577133887926,
-          "energy_error": 9.561915348976768e-05,
-          "energy_per_bond": -0.4986963029468872,
-          "below_ground": false,
-          "dmrg_energy": -2.4935771338879267,
-          "diff_vs_dmrg": 9.561915349065586e-05
-        },
-        {
-          "solver": "one-site AD local",
-          "optimizer": "lbfgs",
-          "N": 6,
-          "chi": 8,
-          "seed": 0,
-          "final_energy": -2.4935771329967493,
-          "initial_energy": -0.3862184141431638,
-          "runtime_s": 1.875986099941656,
-          "device": "cuda:0",
-          "exact_energy": -2.493577133887926,
-          "energy_error": 8.91176465955823e-10,
-          "energy_per_bond": -0.49871542659934986,
-          "below_ground": false,
-          "dmrg_energy": -2.4935771338879267,
-          "diff_vs_dmrg": 8.911773541342427e-10
-        },
-        {
-          "solver": "two-site AD local",
-          "optimizer": "lbfgs",
-          "N": 6,
-          "chi": 8,
-          "seed": 0,
-          "final_energy": -2.493577133049092,
-          "initial_energy": -0.386218414143164,
-          "runtime_s": 0.6882906998507679,
-          "device": "cuda:0",
-          "exact_energy": -2.493577133887926,
-          "energy_error": 8.388338912368454e-10,
-          "energy_per_bond": -0.4987154266098184,
-          "below_ground": false,
-          "dmrg_energy": -2.4935771338879267,
-          "diff_vs_dmrg": 8.388347794152651e-10
-        }
-      ],
-      "speedups": [
-        {
-          "solver": "global AD-MPS",
-          "N": 6,
-          "chi": 8,
-          "cpu_runtime_s": 7.1602290000300854,
-          "gpu_runtime_s": 15.294195299968123,
-          "speedup": 0.4681664422086338,
-          "cpu_final_energy": -2.493481514734435,
-          "gpu_final_energy": -2.493481514734436,
-          "cpu_gpu_energy_diff": 8.881784197001252e-16
-        },
-        {
-          "solver": "one-site AD local",
-          "N": 6,
-          "chi": 8,
-          "cpu_runtime_s": 0.8885552999563515,
-          "gpu_runtime_s": 1.875986099941656,
-          "speedup": 0.4736470595299112,
-          "cpu_final_energy": -2.4935771329967498,
-          "gpu_final_energy": -2.4935771329967493,
-          "cpu_gpu_energy_diff": 4.440892098500626e-16
-        },
-        {
-          "solver": "two-site AD local",
-          "N": 6,
-          "chi": 8,
-          "cpu_runtime_s": 0.2280395000707358,
-          "gpu_runtime_s": 0.6882906998507679,
-          "speedup": 0.33131277252500774,
-          "cpu_final_energy": -2.493577133049092,
-          "gpu_final_energy": -2.493577133049092,
-          "cpu_gpu_energy_diff": 0.0
-        }
-      ]
+      "gpu": [],
+      "speedups": []
     }
   ],
   "checks": {
     "global_AD-MPS_N=4_cpu_not_below_ground_(False)": true,
     "one-site_AD_local_N=4_cpu_not_below_ground_(False)": true,
     "two-site_AD_local_N=4_cpu_not_below_ground_(False)": true,
-    "cpu_gpu_agree_global_AD-MPS_N4": true,
-    "gpu_not_below_ground_global_AD-MPS_N4": true,
-    "cpu_gpu_agree_one-site_AD_local_N4": true,
-    "gpu_not_below_ground_one-site_AD_local_N4": true,
-    "cpu_gpu_agree_two-site_AD_local_N4": true,
-    "gpu_not_below_ground_two-site_AD_local_N4": true,
     "global_AD-MPS_N=6_cpu_not_below_ground_(False)": true,
     "one-site_AD_local_N=6_cpu_not_below_ground_(False)": true,
-    "two-site_AD_local_N=6_cpu_not_below_ground_(False)": true,
-    "cpu_gpu_agree_global_AD-MPS_N6": true,
-    "gpu_not_below_ground_global_AD-MPS_N6": true,
-    "cpu_gpu_agree_one-site_AD_local_N6": true,
-    "gpu_not_below_ground_one-site_AD_local_N6": true,
-    "cpu_gpu_agree_two-site_AD_local_N6": true,
-    "gpu_not_below_ground_two-site_AD_local_N6": true
+    "two-site_AD_local_N=6_cpu_not_below_ground_(False)": true
   },
   "pass": true,
   "known_limitations": [

@@ -10,9 +10,36 @@ Navigation for the `latticeTN` documentation.
 
 ## User documentation
 
-- [USER_GUIDE.md](USER_GUIDE.md) — **the** user-facing guide: install, concepts,
+- [USER_GUIDE.md](USER_GUIDE.md) — **the** user-facing guide (EN): install, concepts,
   examples, observables, canonicalization, adding models, scores, pitfalls.
+- [USER_GUIDE.zh-CN.md](USER_GUIDE.zh-CN.md) — 中文用户指南（面向中文用户解释
+  设计动机，非机械翻译）。
 - [API_OVERVIEW.md](API_OVERVIEW.md) — module-by-module reference.
+
+## Tutorials (EN)
+
+- [01 — Quickstart (Heisenberg)](tutorials/01_quickstart_heisenberg.md)
+- [02 — Global AD-MPS](tutorials/02_global_ad_mps.md)
+- [03 — One-site AD local](tutorials/03_one_site_ad_local.md)
+- [04 — Two-site AD local](tutorials/04_two_site_ad_local.md)
+- [05 — CPU/GPU benchmark](tutorials/05_cpu_gpu_benchmark.md)
+- [06 — Add a new model](tutorials/06_add_new_model.md)
+
+## 教程 (中文)
+
+- [01 — 快速开始 (Heisenberg)](tutorials.zh-CN/01_快速开始_Heisenberg.md)
+- [02 — Global AD-MPS](tutorials.zh-CN/02_Global_AD_MPS.md)
+- [03 — 单点 AD 局部](tutorials.zh-CN/03_One_site_AD_local.md)
+- [04 — 两点 AD 局部](tutorials.zh-CN/04_Two_site_AD_local.md)
+- [05 — CPU/GPU benchmark](tutorials.zh-CN/05_CPU_GPU_benchmark.md)
+- [06 — 添加新模型](tutorials.zh-CN/06_添加新模型.md)
+
+## Doc site (optional)
+
+The docs can be browsed as a local MkDocs site:
+`pip install -r requirements-docs.txt && mkdocs serve` (see `mkdocs.yml`).
+No GitHub Pages auto-deploy is configured; the Markdown stays readable on
+GitHub directly.
 
 ## Policy & direction
 
