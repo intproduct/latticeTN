@@ -40,8 +40,9 @@ MPS parameters (trainable nn.Parameter)
 | Stage 4A/4B | Classical two-site DMRG + Lanczos **baseline** | done |
 | Stage 4R | Global AD-MPS (all tensors trained at once) | done |
 | Stage 5A | AD local-tensor optimization (center-tensor sweep) | done |
+| Stage 5B | Two-site AD local optimization (optional bond growth) | done |
 
-See `ROADMAP.md` for future directions (Stage 5B two-site AD, GPU AD benchmark,
+See `ROADMAP.md` for future directions (Stage 5C GPU AD benchmark,
 XXZ/TFI extensions, TEBD/TDVP).
 
 ## Quick install
@@ -70,6 +71,7 @@ python scripts/canonical_score.py --fast       # Stage 3A canonicalization
 python scripts/contraction_score.py --fast     # Stage 3B native contractions
 python scripts/ad_variational_score.py --fast  # Stage 4R global AD-MPS
 python scripts/ad_local_opt_score.py --fast    # Stage 5A AD local optimization
+python scripts/ad_two_site_score.py --fast     # Stage 5B two-site AD local optimization
 
 # all fast scores at once (no GPU smoke):
 bash scripts/run_all_fast_scores.sh
