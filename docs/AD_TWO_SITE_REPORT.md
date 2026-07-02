@@ -20,8 +20,8 @@ This stage's mainline is **two-site AD local-tensor optimization**: train one tw
 
 | N | chi | sweeps | local_steps | max_bond_dim | exact E0 | two-site AD final E | abs err | tol | below ground | energy decreased |Theta grad not-None | Theta grad finite | runtime_s | pass |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|:---:|:---:|:---:|:---:|---:|:---|
-| 4 | 8 | 4 | 20 | 8 | -1.6160254038 | -1.6160254036 | 1.82e-10 | 1e-08 | False | True | True | True | 1.44 | PASS |
-| 6 | 8 | 4 | 20 | 8 | -2.4935771339 | -2.4935771330 | 8.39e-10 | 1e-05 | False | True | True | True | 0.09 | PASS |
+| 4 | 8 | 4 | 20 | 8 | -1.6160254038 | -1.6160254036 | 1.82e-10 | 1e-08 | False | True | True | True | 2.82 | PASS |
+| 6 | 8 | 4 | 20 | 8 | -2.4935771339 | -2.4935771330 | 8.39e-10 | 1e-05 | False | True | True | True | 0.30 | PASS |
 
 ## One-site AD comparison (N=6)
 

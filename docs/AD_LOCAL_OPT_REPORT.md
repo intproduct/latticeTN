@@ -20,8 +20,8 @@ This stage's mainline is **AD local-tensor optimization**: train one center tens
 
 | N | chi | sweeps | local_steps | exact E0 | AD-local final E | abs err | tol | below ground | max bond | center grad not-None | center grad finite | runtime_s | pass |
 |---:|---:|---:|---:|---:|---:|---:|---:|:---:|---:|:---:|:---:|---:|:---|
-| 4 | 8 | 4 | 20 | -1.6160254038 | -1.6160254037 | 4.19e-11 | 1e-08 | False | 4 | True | True | 1.53 | PASS |
-| 6 | 8 | 4 | 20 | -2.4935771339 | -2.4935771330 | 8.91e-10 | 1e-05 | False | 8 | True | True | 0.29 | PASS |
+| 4 | 8 | 4 | 20 | -1.6160254038 | -1.6160254037 | 4.19e-11 | 1e-08 | False | 4 | True | True | 3.09 | PASS |
+| 6 | 8 | 4 | 20 | -2.4935771339 | -2.4935771330 | 8.91e-10 | 1e-05 | False | 8 | True | True | 0.92 | PASS |
 
 ## Global AD-MPS comparison (N=6)
 
@@ -48,7 +48,7 @@ N=4 (initial E = -0.078104):
 | sweep | energy after | grad norm | state norm | canonical error |
 |---:|---:|---:|---:|---:|
 | 0 | -0.0781043985 | 0.000e+00 | 2.364778e+01 | 3.222e+02 |
-| 1 | -1.6160254037 | 1.126e-07 | 8.808530e+01 | 5.551e-16 |
+| 1 | -1.6160254037 | 1.126e-07 | 8.808530e+01 | 4.441e-16 |
 | 2 | -1.6160254037 | 4.589e-08 | 8.808530e+01 | 3.879e+03 |
 | 3 | -1.6160254037 | 1.126e-07 | 8.808530e+01 | 4.441e-16 |
 | 4 | -1.6160254037 | 4.589e-08 | 8.808530e+01 | 3.879e+03 |

@@ -36,10 +36,13 @@ After this, `import latticetn` works from any directory.
 ### 1.3 CPU / GPU notes
 
 - All default tests and score scripts run **CPU-only** with `torch.complex128`.
-- GPU is **opt-in**: run `python scripts/gpu_score.py --fast` deliberately.
+- GPU is **opt-in**: run `python scripts/gpu_score.py --fast` (Stage 2.5
+  correctness smoke) or `LATTICETN_RUN_GPU=1 python scripts/ad_gpu_benchmark_score.py --fast`
+  (Stage 6A CPU/GPU AD benchmark) deliberately.
 - Never mix CPU and CUDA tensors in one contraction — keep `device` consistent
-  across an MPS / MPO / operators. On a multi-GPU box, follow the project GPU
-  policy (name-matched device selection, never a bare `cuda:0` default).
+  across an MPS / MPO / operators. The Stage 2.5 smoke uses name-matched device
+  selection (multi-GPU boxes); the Stage 6A benchmark targets the machine's
+  single GPU and uses `cuda:0` when `LATTICETN_RUN_GPU=1` and CUDA is available.
 
 ---
 
@@ -322,12 +325,18 @@ depend on the new model.
 | Stage 3B native contractions | native norm/obs/MPO energy | `python scripts/contraction_score.py --fast` |
 | Stage 4R global AD-MPS | differentiable Rayleigh + Adam | `python scripts/ad_variational_score.py --fast` |
 | Stage 5A AD local optimization | center-tensor sweep + LBFGS | `python scripts/ad_local_opt_score.py --fast` |
+| Stage 5B two-site AD local optimization | two-site Theta sweep + bond growth | `python scripts/ad_two_site_score.py --fast` |
+| Stage 6A CPU/GPU AD benchmark | CPU/GPU parity + speedup (opt-in GPU) | `python scripts/ad_gpu_benchmark_score.py --fast` |
 | DMRG baseline (classical) | two-site DMRG reference | `python scripts/dmrg_score.py --fast` |
 | GPU smoke (opt-in) | device handling | `python scripts/gpu_score.py --fast` |
 
 Run all fast scores at once (no GPU): `bash scripts/run_all_fast_scores.sh`.
 
 List per-stage files: `python scripts/<name>_score.py --list`.
+
+> Stage 6A GPU portion: set `LATTICETN_RUN_GPU=1` (and have CUDA available) to
+> run the GPU columns; otherwise it clean-skips and the CPU benchmark still
+> passes. Uses `cuda:0` (the machine's single GPU).
 
 ---
 

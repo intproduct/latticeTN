@@ -41,9 +41,11 @@ MPS parameters (trainable nn.Parameter)
 | Stage 4R | Global AD-MPS (all tensors trained at once) | done |
 | Stage 5A | AD local-tensor optimization (center-tensor sweep) | done |
 | Stage 5B | Two-site AD local optimization (optional bond growth) | done |
+| Stage 6A | CPU/GPU AD solver benchmark (opt-in GPU) | done |
 
-See `ROADMAP.md` for future directions (Stage 5C GPU AD benchmark,
-XXZ/TFI extensions, TEBD/TDVP).
+See `ROADMAP.md` for future directions (XXZ/TFI extensions, TEBD/TDVP). The
+Stage 5C GPU AD benchmark slot from earlier drafts is **implemented as Stage
+6A** — see `docs/AD_GPU_BENCHMARK_SPEC.md`.
 
 ## Quick install
 
@@ -72,6 +74,7 @@ python scripts/contraction_score.py --fast     # Stage 3B native contractions
 python scripts/ad_variational_score.py --fast  # Stage 4R global AD-MPS
 python scripts/ad_local_opt_score.py --fast    # Stage 5A AD local optimization
 python scripts/ad_two_site_score.py --fast     # Stage 5B two-site AD local optimization
+python scripts/ad_gpu_benchmark_score.py --fast # Stage 6A CPU/GPU AD benchmark (CPU-only by default)
 
 # all fast scores at once (no GPU smoke):
 bash scripts/run_all_fast_scores.sh
@@ -80,7 +83,9 @@ bash scripts/run_all_fast_scores.sh
 Opt-in GPU smoke (only run deliberately; never in CI by default):
 
 ```bash
-python scripts/gpu_score.py --fast
+python scripts/gpu_score.py --fast              # Stage 2.5 GPU correctness smoke
+# Stage 6A GPU portion (uses cuda:0; clean-skips if CUDA unavailable):
+LATTICETN_RUN_GPU=1 python scripts/ad_gpu_benchmark_score.py --fast
 ```
 
 ## Minimal example
