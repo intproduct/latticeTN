@@ -114,3 +114,76 @@ Variational principle respected in every case (final_E >= E0 within tol).
 - `scripts/run_heisenberg_small.py`
 - `docs/NUMERICAL_REPORT.md`
 - Prototype files (`AD_MPS.py`, `AD_MPS_fixed.py`, `AD_DMRG.py`, etc.) kept as-is.
+
+## Checkpoint Stage 8-1: Fermion Sector Helpers and AD Benchmark CLI
+
+Goal:
+Implement Stage 8 fixed-sector fermion metadata, product initializers, sector
+diagnostics, and a generalized AD benchmark runner that explicitly skips ED and
+does not use classical DMRG or Lanczos.
+
+Files changed:
+- Added `latticetn/charges.py`
+- Added `latticetn/initial_states.py`
+- Added `latticetn/sector_observables.py`
+- Added `scripts/run_ad_model_benchmark.py`
+- Added `tests/test_charge_metadata.py`
+- Added `tests/test_fixed_sector_initial_states.py`
+- Added `tests/test_sector_observables.py`
+- Added `tests/test_ad_model_benchmark_cli.py`
+- Added `docs/STAGE8_FERMION_SECTOR.md`
+- Updated `latticetn/__init__.py`
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_charge_metadata.py tests/test_fixed_sector_initial_states.py tests/test_sector_observables.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_ad_model_benchmark_cli.py --basetemp D:\AI\latticeTN\.tmp_pytest`
+
+Result:
+- Sector helper tests: 9 passed.
+- Benchmark CLI tests: 3 passed, including the CUDA clean-skip/available path.
+- Plain `pytest` and plain `python` are not usable in this shell; the Miniforge
+  interpreter is required. Pytest's default temp/cache locations hit Windows
+  permission warnings, so CLI tests were run with `--basetemp` inside the
+  workspace.
+
+Current failing test or bottleneck:
+- None in the targeted Stage 8 tests so far.
+
+Next action:
+Run the combined Stage 8 target and then the existing `validation_score.py --fast`
+gate.
+
+## Checkpoint Stage 8-2: Final Verification
+
+Goal:
+Verify Stage 8 changes against the targeted tests, existing fast validation, and
+the full pytest suite.
+
+Files changed:
+- Updated `tests/test_ad_model_benchmark_cli.py` so CPU subprocess tests cover
+  the CLI and the CUDA smoke exercises the same runner in-process. This avoids
+  a flaky CUDA subprocess failure seen only during the full suite, while still
+  running an actual tiny CUDA case when CUDA is available.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_charge_metadata.py tests/test_fixed_sector_initial_states.py tests/test_sector_observables.py tests/test_ad_model_benchmark_cli.py --basetemp D:\AI\latticeTN\.tmp_pytest`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q --basetemp D:\AI\latticeTN\.tmp_pytest`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 8 targeted tests: 12 passed.
+- Full pytest suite: passed, with expected skips and warning-only cache/report
+  messages.
+- Fast validation score: PASS.
+- CUDA was available in this environment and the Stage 8 CUDA smoke ran on CUDA.
+- `pytest`/`python` shims on PATH are not usable here; commands were run through
+  the Miniforge interpreter. Pytest cache/temp paths have Windows permission
+  warnings. Attempting to remove generated `.tmp_pytest` after verification was
+  denied by Windows ACLs, so it remains as an untracked generated artifact.
+
+Current failing test or bottleneck:
+- None.
+
+Next action:
+Report Stage 8 completion status and verification results.
