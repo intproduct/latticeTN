@@ -21,7 +21,7 @@ from .operators import (
 )
 from .fermion_operators import fermion_operators, hubbard_local_operators
 from . import model_builder
-from . import charges, initial_states, sector_observables
+from . import charges, charge_sectors, initial_states, sector_observables
 from .mpo import MPO
 from .mps import MPS
 
@@ -37,6 +37,7 @@ __all__ = [
     "exact_ground_energy",
     "model_builder",
     "charges",
+    "charge_sectors",
     "initial_states",
     "sector_observables",
     "MPO",

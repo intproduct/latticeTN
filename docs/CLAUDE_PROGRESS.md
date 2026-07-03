@@ -187,3 +187,74 @@ Current failing test or bottleneck:
 
 Next action:
 Report Stage 8 completion status and verification results.
+
+## Checkpoint Stage 9-1: Hard-Sector Charge Masks
+
+Goal:
+Implement Stage 9 charge-aware dense MPS metadata, hard U(1) masks, hard-sector
+initializers, and runner support for `--sector-mode none|soft|hard`.
+
+Files changed:
+- Added `latticetn/charge_sectors.py`
+- Updated `latticetn/__init__.py`
+- Updated `scripts/run_ad_model_benchmark.py`
+- Added `tests/test_charge_sectors.py`
+- Added `tests/test_charge_masks.py`
+- Added `tests/test_hard_sector_initial_states.py`
+- Added `tests/test_hard_sector_ad_runner.py`
+- Added `docs/STAGE9_HARD_SECTOR_AD.md`
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_charge_sectors.py tests/test_charge_masks.py tests/test_hard_sector_initial_states.py tests/test_hard_sector_ad_runner.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage9`
+
+Result:
+- Stage 9 targeted tests: 12 passed.
+- Hard-sector implementation uses dense tensors plus charge masks and masked
+  global AD. It does not yet implement blockwise charge-preserving SVD; this is
+  documented as the Stage 9 fallback and future upgrade path.
+
+Current failing test or bottleneck:
+- None in the Stage 9 targeted tests.
+
+Next action:
+Run Stage 8 compatibility tests, full pytest, validation score, and source audit.
+
+## Checkpoint Stage 9-2: Verification and Acceptance Audit
+
+Goal:
+Verify Stage 9 hard-sector implementation, Stage 8 compatibility, full-suite
+compatibility, documented CPU examples, and no-ED/no-DMRG/no-Lanczos runner
+policy.
+
+Files changed:
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_charge_metadata.py tests/test_fixed_sector_initial_states.py tests/test_sector_observables.py tests/test_ad_model_benchmark_cli.py tests/test_charge_sectors.py tests/test_charge_masks.py tests/test_hard_sector_initial_states.py tests/test_hard_sector_ad_runner.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage89`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q --basetemp D:\AI\latticeTN\.tmp_pytest_full_stage9`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_ad_model_benchmark.py --model spinless_tv --N 4 --chi 4 --sweeps 1 --device cpu --dtype complex128 --init spinless_cdw --optimizer adam --local-steps 1 --lr 0.01 --target-n 2 --sector-mode hard --no-ed --output D:\AI\latticeTN\.tmp_pytest_stage9_spinless_cli.json`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_ad_model_benchmark.py --model hubbard --N 4 --chi 4 --sweeps 1 --device cpu --dtype complex128 --init hubbard_neel --optimizer adam --local-steps 1 --lr 0.01 --target-nup 2 --target-ndown 2 --sector-mode hard --no-ed --output D:\AI\latticeTN\.tmp_pytest_stage9_hubbard_cli.json`
+- `rg -n "dmrg|lanczos|exact_ground_energy|build_dense|to_dense\(" scripts/run_ad_model_benchmark.py tests/test_hard_sector_ad_runner.py tests/test_ad_model_benchmark_cli.py docs/STAGE9_HARD_SECTOR_AD.md`
+- `rg -n "V100|A100|RTX" scripts/run_ad_model_benchmark.py docs/STAGE9_HARD_SECTOR_AD.md latticetn/charge_sectors.py tests/test_hard_sector_ad_runner.py`
+
+Result:
+- Stage 8 + Stage 9 targeted tests: 24 passed.
+- Fast validation score: PASS.
+- Full pytest suite: exited 0.
+- Spinless hard-sector CPU CLI example passed with `<N>=2`, `Var(N)=0`,
+  `max_forbidden_abs=0`, and `max_forbidden_grad_abs=0`.
+- Hubbard hard-sector CPU CLI example passed with `<N_up>=2`, `<N_down>=2`,
+  `Var(N_tot)=0`, `max_forbidden_abs=0`, and `max_forbidden_grad_abs=0`.
+- Source audit found no forbidden ED/dense-builder calls in the runner; only
+  result field names and test assertions mention DMRG/Lanczos status.
+- No hardcoded GPU model names were found in the new Stage 9 runner/docs/core
+  files checked.
+- CUDA hard-sector smoke is included with clean skip when CUDA is unavailable;
+  in this environment CUDA was available during targeted tests.
+
+Current failing test or bottleneck:
+- None.
+
+Next action:
+Report Stage 9 completion status.

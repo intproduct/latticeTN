@@ -35,6 +35,14 @@ from latticetn.initial_states import (  # noqa: E402
     spinless_half_filled_cdw_state,
     hubbard_half_filled_neel_state,
 )
+from latticetn.charge_sectors import (  # noqa: E402
+    ChargeAwareMPS,
+    apply_charge_masks_,
+    zero_forbidden_gradients_,
+    max_forbidden_abs,
+    spinless_hard_sector_product_mps,
+    hubbard_hard_sector_product_mps,
+)
 from latticetn.sector_observables import (  # noqa: E402
     total_particle_number,
     sector_leakage_report,
@@ -113,6 +121,47 @@ def make_mps(args, dtype: tc.dtype, device: str) -> tuple[MPS, str]:
             raise ValueError("hubbard_neel init is only valid for --model hubbard")
         return hubbard_half_filled_neel_state(args.N, dtype=dtype, device=device), init
     raise ValueError(f"unsupported init {init!r}")
+
+
+def _infer_spinless_target(args) -> int:
+    if args.target_n is not None:
+        return args.target_n
+    if args.init == "auto" and args.N % 2 == 0:
+        return args.N // 2
+    raise ValueError("--sector-mode hard for spinless_tv requires --target-n")
+
+
+def _infer_hubbard_targets(args) -> tuple[int, int]:
+    if args.target_nup is not None and args.target_ndown is not None:
+        return args.target_nup, args.target_ndown
+    if args.init == "auto" and args.N % 2 == 0:
+        return args.N // 2, args.N // 2
+    raise ValueError("--sector-mode hard for hubbard requires --target-nup and --target-ndown")
+
+
+def make_hard_charge_mps(args, dtype: tc.dtype, device: str) -> tuple[ChargeAwareMPS, str]:
+    init = default_init(args.model) if args.init == "auto" else args.init
+    if args.model == "spinless_tv":
+        target_n = _infer_spinless_target(args)
+        pattern = "cdw" if init in {"spinless_cdw", "auto"} else "left"
+        return (
+            spinless_hard_sector_product_mps(
+                args.N, target_n=target_n, chi=args.chi, pattern=pattern,
+                dtype=dtype, device=device,
+            ),
+            init,
+        )
+    if args.model == "hubbard":
+        target_nup, target_ndown = _infer_hubbard_targets(args)
+        pattern = "neel" if init in {"hubbard_neel", "auto"} else "balanced"
+        return (
+            hubbard_hard_sector_product_mps(
+                args.N, target_nup=target_nup, target_ndown=target_ndown,
+                chi=args.chi, pattern=pattern, dtype=dtype, device=device,
+            ),
+            init,
+        )
+    raise ValueError("--sector-mode hard is supported only for spinless_tv and hubbard")
 
 
 def bond_dims(mps: MPS) -> list[int]:
@@ -219,6 +268,62 @@ def run_global_penalty_ad(args, mps: MPS, mpo: MPO) -> tuple[list[dict], float]:
     return history, max_grad
 
 
+def run_hard_sector_ad(args, camps: ChargeAwareMPS, mpo: MPO) -> tuple[list[dict], float, float]:
+    """Global AD with hard charge masks applied to values and gradients."""
+
+    mps = camps.mps
+    apply_charge_masks_(mps, camps.masks)
+    for p in mps.tensors:
+        p.requires_grad_(True)
+    params = list(mps.parameters())
+    history = []
+    max_grad = 0.0
+    max_forbidden_grad = 0.0
+    for sweep in range(args.sweeps):
+        opt = tc.optim.Adam(params, lr=args.lr) if args.optimizer == "adam" else tc.optim.LBFGS(
+            params, lr=args.lr, max_iter=args.lbfgs_iters, line_search_fn="strong_wolfe"
+        )
+
+        def closure():
+            opt.zero_grad(set_to_none=True)
+            apply_charge_masks_(mps, camps.masks)
+            loss = current_energy(mps, mpo)
+            loss.backward()
+            nonlocal max_forbidden_grad
+            max_forbidden_grad = max(
+                max_forbidden_grad,
+                zero_forbidden_gradients_(params, camps.masks),
+            )
+            return loss
+
+        steps = args.local_steps if args.optimizer == "adam" else max(1, args.local_steps)
+        for _ in range(steps):
+            if args.optimizer == "adam":
+                closure()
+                max_grad = max(max_grad, grad_norm(params, mps.device))
+                if args.grad_clip is not None and args.grad_clip > 0:
+                    tc.nn.utils.clip_grad_norm_(params, args.grad_clip)
+                opt.step()
+                apply_charge_masks_(mps, camps.masks)
+            else:
+                opt.step(closure)
+                max_grad = max(max_grad, grad_norm(params, mps.device))
+                apply_charge_masks_(mps, camps.masks)
+        e = tensor_to_float(current_energy(mps, mpo))
+        history.append({
+            "sweep": sweep,
+            "energy": e,
+            "energy_per_site": e / args.N,
+            "sector_report": sector_report(args, mps),
+            "max_bond": max_bond(mps),
+            "max_grad_norm": max_grad,
+            "max_forbidden_abs": max_forbidden_abs(mps, camps.masks),
+            "max_forbidden_grad_abs": max_forbidden_grad,
+            "split_strategy": camps.split_strategy,
+        })
+    return history, max_grad, max_forbidden_grad
+
+
 def run_two_site_ad(args, mps: MPS, mpo: MPO) -> tuple[list[dict], float]:
     ad = ADTwoSiteOptimizer(mps, mpo, bond=0)
     history = []
@@ -285,7 +390,7 @@ def cuda_memory(device: str) -> dict:
 
 def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
     if not args.no_ed:
-        raise ValueError("Stage 8 benchmark runner requires --no-ed")
+        raise ValueError("AD benchmark runner requires --no-ed")
     dtype = parse_dtype(args.dtype)
     device = resolve_device(args.device)
     if device.startswith("cuda"):
@@ -293,17 +398,24 @@ def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
     tc.manual_seed(args.seed)
 
     mpo = build_mpo(args, dtype, device)
-    mps, init = make_mps(args, dtype, device)
+    charge_aware = None
+    if args.sector_mode == "hard":
+        charge_aware, init = make_hard_charge_mps(args, dtype, device)
+        mps = charge_aware.mps
+    else:
+        mps, init = make_mps(args, dtype, device)
     initial_energy = tensor_to_float(current_energy(mps, mpo))
     initial_sector = sector_report(args, mps)
-    use_penalty_path = (
+    legacy_penalty_requested = (
         (args.model == "spinless_tv" and args.lambda_n != 0.0)
         or (args.model == "hubbard" and (args.lambda_nup != 0.0 or args.lambda_ndown != 0.0))
     )
+    use_penalty_path = args.sector_mode == "soft" or legacy_penalty_requested
 
     print("latticeTN AD model benchmark")
     print(f"model={args.model} N={args.N} chi={args.chi} sweeps={args.sweeps}")
     print(f"device={device} dtype={args.dtype} optimizer={args.optimizer} init={init}")
+    print(f"sector mode = {args.sector_mode}")
     if device.startswith("cuda"):
         print(f"GPU: {tc.cuda.get_device_name(tc.device(device))}")
     print("ED status = skipped by design")
@@ -313,11 +425,16 @@ def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
         print(f"initial sector report = {initial_sector}")
 
     t0 = time.perf_counter()
-    if use_penalty_path:
+    if args.sector_mode == "hard":
+        history, max_grad, max_forbidden_grad = run_hard_sector_ad(args, charge_aware, mpo)
+        optimizer_path = "global_ad_hard_charge_mask"
+    elif use_penalty_path:
         history, max_grad = run_global_penalty_ad(args, mps, mpo)
+        max_forbidden_grad = None
         optimizer_path = "global_ad_with_sector_penalty"
     else:
         history, max_grad = run_two_site_ad(args, mps, mpo)
+        max_forbidden_grad = None
         optimizer_path = "two_site_ad"
     runtime = time.perf_counter() - t0
 
@@ -331,6 +448,11 @@ def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
         )
         if rec.get("sector_report") is not None:
             print(f"  sector report = {rec['sector_report']}")
+        if args.sector_mode == "hard":
+            print(
+                f"  hard sector: max_forbidden_abs={rec['max_forbidden_abs']:.3e} "
+                f"max_forbidden_grad_abs={rec['max_forbidden_grad_abs']:.3e}"
+            )
     print(f"final energy = {final_energy:.12f}")
     print(f"final E/site = {final_energy / args.N:.12f}")
     print(f"final max bond = {max_bond(mps)}")
@@ -348,6 +470,7 @@ def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
         "dtype": args.dtype,
         "optimizer": args.optimizer,
         "optimizer_path": optimizer_path,
+        "sector_mode": args.sector_mode,
         "init": init,
         "initial_energy": initial_energy,
         "initial_energy_per_site": initial_energy / args.N,
@@ -358,6 +481,13 @@ def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
         "final_sector_report": final_sector,
         "final_max_bond": max_bond(mps),
         "final_max_grad_norm": max_grad,
+        "final_max_forbidden_abs": (
+            max_forbidden_abs(mps, charge_aware.masks) if charge_aware is not None else None
+        ),
+        "final_max_forbidden_grad_abs": max_forbidden_grad,
+        "hard_sector_split_strategy": (
+            charge_aware.split_strategy if charge_aware is not None else None
+        ),
         "runtime": runtime,
         "gpu_memory": cuda_memory(device),
         "ed_status": "skipped by design",
@@ -387,6 +517,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lr", type=float, default=0.01)
     p.add_argument("--stabilization", choices=["tensor_norm", "none"], default="none")
     p.add_argument("--grad-clip", type=float, default=None)
+    p.add_argument("--sector-mode", choices=["none", "soft", "hard"], default="none")
     p.add_argument("--output", type=Path, default=None)
     p.add_argument("--no-ed", action="store_true")
     p.add_argument("--seed", type=int, default=0)
