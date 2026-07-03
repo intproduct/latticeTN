@@ -23,7 +23,68 @@ Spin operators and dense (small-N) Hamiltonians used as golden references.
 - `heisenberg_dense(N, J=1.0, dtype, device)` → dense Heisenberg Hamiltonian
   `(2**N, 2**N)`.
 - `tfi_dense(N, J=1.0, h=1.0, dtype, device)` → dense transverse-field Ising.
+- `spinless_fermion_dense(N, t=1.0, V=0.0, mu=0.0, dtype, device)` → dense
+  open-boundary spinless fermion t-V chain (Stage 7A). Built with the explicit
+  global Jordan-Wigner parity string `F = (-1)^n` — a genuine fermionic
+  Hamiltonian, NOT a hard-core-boson one.
+- `hubbard_dense(N, t=1.0, U=4.0, mu=0.0, h=0.0, dtype, device)` → dense
+  open-boundary spinful Hubbard chain (Stage 7C), d=4. Built with the explicit
+  global Jordan-Wigner parity (site-major 2N-mode ordering; per-site parity
+  `P = F_up x F_down` on the left-factor site of each spin-resolved hop) — a
+  genuine fermionic Hamiltonian, NOT a spin / hard-core-boson one.
 - `exact_ground_energy(H)` → `(E0, ground_state)` (reference / oracle).
+
+## `latticetn.fermion_operators` — fermion local operators (Stage 7A / 7C)
+
+Local fermion operators. This is 1D Jordan-Wigner, NOT graded fermionic
+tensors.
+
+- `fermion_operators(dtype, device)` → `{"I","c","cdag","n","F","n_minus_half"}`
+  (Stage 7A, spinless, 2x2) with `c = [[0,1],[0,0]]`, `c^d = [[0,0],[1,0]]`,
+  `n = c^d c = diag(0,1)`, `F = (-1)^n = diag(1,-1)` (the JW parity string),
+  `n-1/2 = diag(-1/2,1/2)`. Algebra: `{c,c^d}=I`, `c^2=(c^d)^2=0`, `n=c^d c`,
+  `F^2=I`, `F c = -c F`.
+- `hubbard_local_operators(dtype, device)` → `{"I","cup","cdagup","cdown",
+  "cdagdown","nup","ndown","ntot","sz","double_occ","parity"}` (Stage 7C,
+  spinful, 4x4) in the standard Hubbard basis `|0>,|up>,|down>,|up,down>`.
+  On-site JW order is up-first (the down operators carry `F_up` internally);
+  `parity = F_up x F_down = diag(1,-1,-1,1)`. Algebra: same-spin
+  `{c_s,c^d_s}=I`, cross-spin `{c_up,c_down}=0`, etc.; `parity` anticommutes
+  with `c`/`c^d`.
+
+## `latticetn.model_builder` — general 1D model builder (Stage 7B)
+
+A **model/MPO construction layer, NOT a new solver**. Describes a 1D
+open-boundary chain as a `ModelSpec` (list of terms + explicit
+`statistics` = "boson"|"fermion"), and builds dense/MPO from it. The AD
+mainline is unchanged.
+
+- `ModelSpec(N, dim, statistics, terms, name, dtype, device)` — the spec.
+- Term types: `OnsiteTerm(op, coeff)`; `TwoSiteTerm(op_i, op_j, coeff)`
+  (bosonic/spin, NO JW string); `FermionHopTerm(coeff)` (JW, carries the
+  parity string — NOT hard-core-boson); `DensityDensityTerm(coeff, op)`
+  (diagonal, no JW string).
+- Presets: `heisenberg_model(N, J)` (S=sigma/2, boson);
+  `spinless_fermion_tv_model(N, t, V, mu)` (Stage 7A t-V chain, fermion);
+  `hubbard_model(N, t, U, mu, h)` (Stage 7C spinful Hubbard, fermion, d=4).
+- `build_dense(spec)` → `(2**N, 2**N)` dense Hamiltonian (dispatches to the
+  existing validated references; byte-identical to Stage 1/7A).
+- `build_mpo(spec)` → `MPO` (dispatches to `MPO.generate_*`; `to_dense`
+  matches `build_dense`). For fermions the JW parity string is carried by the
+  MPO's parity-carrying virtual state.
+
+## `latticetn.benchmarking` — unified CPU/GPU benchmark registry (Stage 7B)
+
+A benchmark/recording layer (NOT a solver) that runs the AD mainline solver
+on a model spec on CPU and (opt-in) a V100/TITAN V GPU, recording the
+Stage-7A+ timing contract. Uses `scripts/gpu_selector.py` (V100/TITAN V;
+clean-skip; no fallback).
+
+- `RunRecord` — dataclass: model, N, chi, solver, device, device_name, dtype,
+  runtime, speedup, final_energy, exact_error, below_ground, gpu_skip_reason.
+- `benchmark_model(spec, chi, seed, steps)` → dict with `cpu`/`gpu` records,
+  `speedup`, `exact_energy`, `device_info`, `gpu_skip_reason`, `gpu_ran`.
+- The GPU is NOT required to be faster; speedup is recorded only.
 
 ## `latticetn.mps` — matrix-product state
 
@@ -39,7 +100,13 @@ Spin operators and dense (small-N) Hamiltonians used as golden references.
 ## `latticetn.mpo` — matrix-product operator
 
 - `MPO.from_bonds(N, dim, dtype, device)` → builder; chain
-  `.generate_heisenberg(J=1.0)` / `.generate_tfi(...)` to populate tensors.
+  `.generate_heisenberg(J=1.0)` / `.generate_tfi(...)` /
+  `.generate_spinless_fermion(t=1.0, V=0.0, mu=0.0)` (Stage 7A, bond dim 6,
+  JW parity-carrying virtual state) /
+  `.generate_hubbard(t=1.0, U=4.0, mu=0.0, h=0.0)` (Stage 7C, bond dim 6, d=4,
+  no separate parity-carrying state — the inter-site parity cancels in the
+  product; the surviving site-`i` parity is absorbed into the `@P`/`P@` left
+  factors of each spin-resolved hop) to populate tensors.
 - `MPO.tensors` → list of site tensors `(left, right, phys_in, phys_out)`.
 
 ## `latticetn.contractions` — differentiable native contractions (THE LOSS PATH)
@@ -69,6 +136,34 @@ Small-N diagnostics (dense-path; pair with `exact_ground_energy` references).
 - `dense_entanglement_entropy(state, cut, N)`.
 - `mps_expect_local(mps, op, site)`, `mps_expect_two_site(...)`,
   `mps_bond_energy_heisenberg(mps, i)`, `mps_entanglement_entropy(mps, cut)`.
+
+### Spinless fermion observables (Stage 7A)
+
+Dense-reference fermion observables for the t-V chain (1D JW; the NN hopping
+observable carries the JW parity string so it is genuinely fermionic):
+
+- `dense_fermion_local_density(state, site, N)` → `<n_site>`.
+- `dense_fermion_density_density(state, i, j, N)` → `<n_i n_j>`.
+- `dense_fermion_nn_hopping(state, i, N)` → `<c^d_i c_{i+1} + h.c.>`.
+- `mps_fermion_local_density(mps, site)`,
+  `mps_fermion_density_density(mps, i, j)`,
+  `mps_fermion_nn_hopping(mps, i)` — MPS variants (dense-reference).
+
+### Spinful Hubbard observables (Stage 7C)
+
+Dense-reference Hubbard observables (1D JW; the spin-resolved NN hopping
+carries the surviving per-site parity `P` at the left-factor site so it is
+genuinely fermionic):
+
+- `dense_hubbard_local_density(state, site, N, spin)` →
+  `<n_{site, spin}>` (spin in "up"/"down"/"tot").
+- `dense_hubbard_double_occ(state, site, N)` → `<n_up_site n_down_site>`.
+- `dense_hubbard_local_sz(state, site, N)` → `<S^z_site>`.
+- `dense_hubbard_nn_hopping(state, i, N, spin)` →
+  `<c^d_{i,s} c_{i+1,s} + h.c.>` (spin in "up"/"down").
+- `mps_hubbard_local_density(mps, site, spin=...)`,
+  `mps_hubbard_double_occ(mps, site)`, `mps_hubbard_local_sz(mps, site)`,
+  `mps_hubbard_nn_hopping(mps, i, spin=...)` — MPS variants (dense-reference).
 
 ## `latticetn.canonical` — SVD/QR canonicalization + compression (Stage 3A)
 
@@ -154,7 +249,7 @@ solver. **Not** imported by the AD modules.
 
 ---
 
-## Benchmark / score scripts (Stage 6A)
+## Benchmark / score scripts (Stage 6A / 7A)
 
 - `scripts/run_ad_gpu_benchmark.py` — CPU/GPU benchmark of the three AD
   mainline solvers (global AD-MPS, one-site AD, two-site AD) with exact / DMRG
@@ -164,6 +259,21 @@ solver. **Not** imported by the AD modules.
   device-placed MPS/MPO.
 - `scripts/ad_gpu_benchmark_score.py` — Stage 6A score: runs the three
   benchmark test files, regenerates the report, checks required terms.
+- `scripts/gpu_selector.py` — unified GPU selector (Stage 7A onward). Selects
+  a GPU whose name contains `V100` or `TITAN V`/`Titan V`; clean-skips (no
+  fallback) otherwise. Opt-in via `LATTICETN_RUN_GPU=1`.
+- `scripts/run_spinless_fermion_benchmark.py` — Stage 7A CPU/GPU benchmark of
+  the three AD mainline solvers on the spinless fermion t-V chain (JW), with
+  ED reference. GPU opt-in via `LATTICETN_RUN_GPU=1` + unified selector.
+  Writes `docs/FERMION_REPORT.md` + JSON results.
+- `scripts/fermion_score.py` — Stage 7A score: runs the six fermion test
+  files, regenerates the report, checks required terms.
+- `scripts/run_model_builder_benchmark.py` — Stage 7B unified benchmark
+  registry across registered model presets (Heisenberg, spinless fermion
+  t-V) on CPU and (opt-in) a V100/TITAN V GPU. Writes
+  `docs/MODEL_BUILDER_REPORT.md` + JSON results.
+- `scripts/model_builder_score.py` — Stage 7B score: runs the five
+  model-builder test files, regenerates the report, checks required terms.
 
 ---
 

@@ -15,8 +15,12 @@ from .operators import (
     pauli_matrices,
     heisenberg_dense,
     tfi_dense,
+    spinless_fermion_dense,
+    hubbard_dense,
     exact_ground_energy,
 )
+from .fermion_operators import fermion_operators, hubbard_local_operators
+from . import model_builder
 from .mpo import MPO
 from .mps import MPS
 
@@ -25,7 +29,12 @@ __all__ = [
     "pauli_matrices",
     "heisenberg_dense",
     "tfi_dense",
+    "spinless_fermion_dense",
+    "hubbard_dense",
+    "fermion_operators",
+    "hubbard_local_operators",
     "exact_ground_energy",
+    "model_builder",
     "MPO",
     "MPS",
 ]

@@ -1,0 +1,406 @@
+{
+  "convention": "H = -t sum_i (c^d_i c_{i+1} + h.c.) + V sum_i (n_i-1/2)(n_{i+1}-1/2) - mu sum_i (n_i-1/2); open boundary; d=2; complex128; 1D Jordan-Wigner fermions (NOT graded fermionic tensors).",
+  "dtype": "torch.complex128",
+  "seed": 0,
+  "mainline_statement": "This benchmark evaluates the AD mainline solvers (global AD-MPS, one-site AD local, two-site AD local) on the spinless fermion t-V chain on CPU and (opt-in) a V100/TITAN V GPU. Exact diagonalization is a classical reference baseline ONLY and is NOT part of the AD optimization path. The AD loss path is unchanged; only the Hamiltonian/MPO/operator layer is new (Stage 7A).",
+  "device_info": {
+    "torch_version": "2.10.0+cu128",
+    "cuda_version": "12.8",
+    "cuda_available": true,
+    "device_count": 3,
+    "gpu_name": "Tesla V100-SXM2-16GB",
+    "device": "cuda:0",
+    "source": "nvidia-smi",
+    "all_gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA RTX PRO 4000 Blackwell"
+      },
+      {
+        "index": 1,
+        "name": "Tesla V100-SXM2-16GB"
+      },
+      {
+        "index": 2,
+        "name": "Tesla V100-SXM2-16GB"
+      }
+    ],
+    "matched_gpus": [
+      {
+        "index": 1,
+        "name": "Tesla V100-SXM2-16GB"
+      },
+      {
+        "index": 2,
+        "name": "Tesla V100-SXM2-16GB"
+      }
+    ],
+    "allowed_filters": [
+      "V100",
+      "TITAN V",
+      "Titan V"
+    ],
+    "env_run_gpu": true,
+    "skip_reason": null,
+    "gpu_ran": true
+  },
+  "gpu_skip_reason": null,
+  "gpu_ran": true,
+  "cases": [
+    {
+      "N": 4,
+      "chi": 4,
+      "t": 1.0,
+      "V": 0.5,
+      "mu": 0.0,
+      "exact": {
+        "solver": "exact diagonalization (reference)",
+        "optimizer": "none (numpy.linalg.eigh)",
+        "N": 4,
+        "final_energy": -2.4679289750386113,
+        "runtime_s": 0.0006585000082850456,
+        "device": "cpu",
+        "is_reference": true
+      },
+      "cpu": [
+        {
+          "solver": "global AD-MPS",
+          "optimizer": "adam",
+          "N": 4,
+          "chi": 4,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -2.467779115969287,
+          "initial_energy": 0.20004647424749725,
+          "runtime_s": 2.026493600104004,
+          "device": "cpu",
+          "exact_energy": -2.4679289750386113,
+          "energy_error": 0.00014985906932452053,
+          "energy_per_bond": -0.822593038656429,
+          "below_ground": false
+        },
+        {
+          "solver": "one-site AD local",
+          "optimizer": "lbfgs",
+          "N": 4,
+          "chi": 4,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -2.4679289749908113,
+          "initial_energy": 0.20004647424749736,
+          "runtime_s": 0.10990349994972348,
+          "device": "cpu",
+          "exact_energy": -2.4679289750386113,
+          "energy_error": 4.779998619142134e-11,
+          "energy_per_bond": -0.8226429916636038,
+          "below_ground": false
+        },
+        {
+          "solver": "two-site AD local",
+          "optimizer": "lbfgs",
+          "N": 4,
+          "chi": 4,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -2.4679289746531037,
+          "initial_energy": 0.20004647424749744,
+          "runtime_s": 0.032945799990557134,
+          "device": "cpu",
+          "exact_energy": -2.4679289750386113,
+          "energy_error": 3.8550762582190146e-10,
+          "energy_per_bond": -0.8226429915510346,
+          "below_ground": false
+        }
+      ],
+      "gpu": [
+        {
+          "solver": "global AD-MPS",
+          "optimizer": "adam",
+          "N": 4,
+          "chi": 4,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -2.467779115969286,
+          "initial_energy": 0.20004647424749733,
+          "runtime_s": 1.6435297999996692,
+          "device": "cuda:0",
+          "exact_energy": -2.4679289750386113,
+          "energy_error": 0.0001498590693254087,
+          "energy_per_bond": -0.8225930386564286,
+          "below_ground": false
+        },
+        {
+          "solver": "one-site AD local",
+          "optimizer": "lbfgs",
+          "N": 4,
+          "chi": 4,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -2.4679289749908113,
+          "initial_energy": 0.20004647424749725,
+          "runtime_s": 0.30537489999551326,
+          "device": "cuda:0",
+          "exact_energy": -2.4679289750386113,
+          "energy_error": 4.779998619142134e-11,
+          "energy_per_bond": -0.8226429916636038,
+          "below_ground": false
+        },
+        {
+          "solver": "two-site AD local",
+          "optimizer": "lbfgs",
+          "N": 4,
+          "chi": 4,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -2.4679289746531023,
+          "initial_energy": 0.20004647424749716,
+          "runtime_s": 0.08700230007525533,
+          "device": "cuda:0",
+          "exact_energy": -2.4679289750386113,
+          "energy_error": 3.85508958089531e-10,
+          "energy_per_bond": -0.8226429915510342,
+          "below_ground": false
+        }
+      ],
+      "speedups": [
+        {
+          "solver": "global AD-MPS",
+          "N": 4,
+          "chi": 4,
+          "cpu_runtime_s": 2.026493600104004,
+          "gpu_runtime_s": 1.6435297999996692,
+          "speedup": 1.233012994412643,
+          "cpu_final_energy": -2.467779115969287,
+          "gpu_final_energy": -2.467779115969286,
+          "cpu_gpu_energy_diff": 8.881784197001252e-16
+        },
+        {
+          "solver": "one-site AD local",
+          "N": 4,
+          "chi": 4,
+          "cpu_runtime_s": 0.10990349994972348,
+          "gpu_runtime_s": 0.30537489999551326,
+          "speedup": 0.3598969658322876,
+          "cpu_final_energy": -2.4679289749908113,
+          "gpu_final_energy": -2.4679289749908113,
+          "cpu_gpu_energy_diff": 0.0
+        },
+        {
+          "solver": "two-site AD local",
+          "N": 4,
+          "chi": 4,
+          "cpu_runtime_s": 0.032945799990557134,
+          "gpu_runtime_s": 0.08700230007525533,
+          "speedup": 0.3786773448754762,
+          "cpu_final_energy": -2.4679289746531037,
+          "gpu_final_energy": -2.4679289746531023,
+          "cpu_gpu_energy_diff": 1.3322676295501878e-15
+        }
+      ]
+    },
+    {
+      "N": 6,
+      "chi": 8,
+      "t": 1.0,
+      "V": 0.5,
+      "mu": 0.0,
+      "exact": {
+        "solver": "exact diagonalization (reference)",
+        "optimizer": "none (numpy.linalg.eigh)",
+        "N": 6,
+        "final_energy": -3.8325138949140185,
+        "runtime_s": 0.0026692000683397055,
+        "device": "cpu",
+        "is_reference": true
+      },
+      "cpu": [
+        {
+          "solver": "global AD-MPS",
+          "optimizer": "adam",
+          "N": 6,
+          "chi": 8,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -3.8312714605215215,
+          "initial_energy": 0.04008945779954908,
+          "runtime_s": 1.6207135000731796,
+          "device": "cpu",
+          "exact_energy": -3.8325138949140185,
+          "energy_error": 0.0012424343924970493,
+          "energy_per_bond": -0.7662542921043043,
+          "below_ground": false
+        },
+        {
+          "solver": "one-site AD local",
+          "optimizer": "lbfgs",
+          "N": 6,
+          "chi": 8,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -3.8325138378125185,
+          "initial_energy": 0.04008945779954894,
+          "runtime_s": 0.29882390005514026,
+          "device": "cpu",
+          "exact_energy": -3.8325138949140185,
+          "energy_error": 5.710149997284475e-08,
+          "energy_per_bond": -0.7665027675625037,
+          "below_ground": false
+        },
+        {
+          "solver": "two-site AD local",
+          "optimizer": "lbfgs",
+          "N": 6,
+          "chi": 8,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -3.8325138914341017,
+          "initial_energy": 0.04008945779954901,
+          "runtime_s": 0.0896153999492526,
+          "device": "cpu",
+          "exact_energy": -3.8325138949140185,
+          "energy_error": 3.4799167991650393e-09,
+          "energy_per_bond": -0.7665027782868203,
+          "below_ground": false
+        }
+      ],
+      "gpu": [
+        {
+          "solver": "global AD-MPS",
+          "optimizer": "adam",
+          "N": 6,
+          "chi": 8,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -3.83127146052152,
+          "initial_energy": 0.040089457799549234,
+          "runtime_s": 2.941903500002809,
+          "device": "cuda:0",
+          "exact_energy": -3.8325138949140185,
+          "energy_error": 0.0012424343924983816,
+          "energy_per_bond": -0.7662542921043041,
+          "below_ground": false
+        },
+        {
+          "solver": "one-site AD local",
+          "optimizer": "lbfgs",
+          "N": 6,
+          "chi": 8,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -3.8325138319366174,
+          "initial_energy": 0.04008945779954892,
+          "runtime_s": 0.6218049000017345,
+          "device": "cuda:0",
+          "exact_energy": -3.8325138949140185,
+          "energy_error": 6.2977401071862e-08,
+          "energy_per_bond": -0.7665027663873235,
+          "below_ground": false
+        },
+        {
+          "solver": "two-site AD local",
+          "optimizer": "lbfgs",
+          "N": 6,
+          "chi": 8,
+          "t": 1.0,
+          "V": 0.5,
+          "mu": 0.0,
+          "seed": 0,
+          "final_energy": -3.832513891434103,
+          "initial_energy": 0.040089457799548825,
+          "runtime_s": 0.2340418000239879,
+          "device": "cuda:0",
+          "exact_energy": -3.8325138949140185,
+          "energy_error": 3.4799154668974097e-09,
+          "energy_per_bond": -0.7665027782868206,
+          "below_ground": false
+        }
+      ],
+      "speedups": [
+        {
+          "solver": "global AD-MPS",
+          "N": 6,
+          "chi": 8,
+          "cpu_runtime_s": 1.6207135000731796,
+          "gpu_runtime_s": 2.941903500002809,
+          "speedup": 0.550906411468504,
+          "cpu_final_energy": -3.8312714605215215,
+          "gpu_final_energy": -3.83127146052152,
+          "cpu_gpu_energy_diff": 1.3322676295501878e-15
+        },
+        {
+          "solver": "one-site AD local",
+          "N": 6,
+          "chi": 8,
+          "cpu_runtime_s": 0.29882390005514026,
+          "gpu_runtime_s": 0.6218049000017345,
+          "speedup": 0.4805750164630525,
+          "cpu_final_energy": -3.8325138378125185,
+          "gpu_final_energy": -3.8325138319366174,
+          "cpu_gpu_energy_diff": 5.8759010990172555e-09
+        },
+        {
+          "solver": "two-site AD local",
+          "N": 6,
+          "chi": 8,
+          "cpu_runtime_s": 0.0896153999492526,
+          "gpu_runtime_s": 0.2340418000239879,
+          "speedup": 0.3829033956330346,
+          "cpu_final_energy": -3.8325138914341017,
+          "gpu_final_energy": -3.832513891434103,
+          "cpu_gpu_energy_diff": 1.3322676295501878e-15
+        }
+      ]
+    }
+  ],
+  "checks": {
+    "global_AD-MPS_N4_cpu_not_below_ground": true,
+    "one-site_AD_local_N4_cpu_not_below_ground": true,
+    "two-site_AD_local_N4_cpu_not_below_ground": true,
+    "cpu_gpu_agree_global_AD-MPS_N4": true,
+    "gpu_not_below_ground_global_AD-MPS_N4": true,
+    "cpu_gpu_agree_one-site_AD_local_N4": true,
+    "gpu_not_below_ground_one-site_AD_local_N4": true,
+    "cpu_gpu_agree_two-site_AD_local_N4": true,
+    "gpu_not_below_ground_two-site_AD_local_N4": true,
+    "global_AD-MPS_N6_cpu_not_below_ground": true,
+    "one-site_AD_local_N6_cpu_not_below_ground": true,
+    "two-site_AD_local_N6_cpu_not_below_ground": true,
+    "cpu_gpu_agree_global_AD-MPS_N6": true,
+    "gpu_not_below_ground_global_AD-MPS_N6": true,
+    "cpu_gpu_agree_one-site_AD_local_N6": true,
+    "gpu_not_below_ground_one-site_AD_local_N6": true,
+    "cpu_gpu_agree_two-site_AD_local_N6": true,
+    "gpu_not_below_ground_two-site_AD_local_N6": true
+  },
+  "pass": true,
+  "known_limitations": [
+    "1D Jordan-Wigner fermions only; NOT a full graded fermionic tensor network. No Hubbard, no TDVP, no finite-temperature.",
+    "Open-boundary spinless t-V chain only (d=2).",
+    "Small systems only (N=4/6, chi=4/8); large-N scaling is out of scope.",
+    "GPU is opt-in (LATTICETN_RUN_GPU=1) and selects only V100/TITAN V via the unified selector; clean-skips otherwise (no fallback).",
+    "Runtime/speedup are recorded but the GPU is NOT required to be faster: small systems are overhead-dominated.",
+    "ED is a CPU-only reference baseline; the GPU runs only the AD solver optimization."
+  ]
+}

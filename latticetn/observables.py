@@ -26,6 +26,7 @@ import numpy as np
 import torch as tc
 
 from .operators import spin_operators
+from .fermion_operators import fermion_operators, hubbard_local_operators
 
 
 # ---------------------------------------------------------------------------
@@ -178,3 +179,257 @@ def mps_entanglement_entropy(mps, cut):
     """Bipartite entanglement entropy of an MPS across a cut, via dense ref."""
     psi = _mps_dense_state(mps)
     return dense_entanglement_entropy(psi, cut, mps.N)
+
+
+# ---------------------------------------------------------------------------
+# Spinless-fermion observables (Stage 7A)
+# ---------------------------------------------------------------------------
+#
+# These are small-N dense-reference observables for the open-boundary 1D
+# spinless fermion t-V chain. They are NOT full graded fermionic tensors; they
+# use the Jordan-Wigner construction (parity string F = (-1)^n on every site
+# left of the operator), matching ``operators.spinless_fermion_dense`` and
+# ``MPO.generate_spinless_fermion``.
+#
+# - local density <n_i>             : diagonal, no JW string needed.
+# - density-density <n_i n_j>       : diagonal, no JW string needed.
+# - NN hopping <c^d_i c_{i+1}+h.c.> : the JW strings between i and i+1 cancel,
+#   so the two-site operator is the ordinary bosonic product (c^d on i,
+#   c on i+1) + h.c. — but the GLOBAL operators carry F on sites 0..i-1. We
+#   build the global hopping observable with the explicit JW string so it is
+#   a genuine fermionic observable (and matches the dense Hamiltonian's
+#   hopping term exactly).
+# ---------------------------------------------------------------------------
+
+
+def _fermion_global_two_site(op_i, i, op_i1, i1, N, dtype, device) -> tc.Tensor:
+    """Global fermionic two-site operator with the JW parity string.
+
+    Builds ``F^{i} x op_i x op_{i1} x I...`` (parity F on every site left of
+    ``i``, then ``op_i`` at ``i``, ``op_{i1}`` at ``i1``, identity elsewhere).
+    For nearest-neighbor (i1 = i+1) the JW string between the two sites
+    cancels, so this equals the reduced two-site product with the left parity
+    string — exactly the form used in ``operators.spinless_fermion_dense``.
+    """
+    ops = fermion_operators(dtype=dtype, device=device)
+    I = ops["I"]
+    F = ops["F"]
+    assert i < i1, "use i < i1 (left factor first)"
+    term = None
+    for k in range(N):
+        if k < i:
+            g = F
+        elif k == i:
+            g = op_i
+        elif k == i1:
+            g = op_i1
+        else:
+            g = I
+        term = g if term is None else tc.kron(term, g)
+    return term
+
+
+def dense_fermion_local_density(state, site: int, N: int) -> tc.Tensor:
+    """<n_site> for a normalized dense fermion state vector.
+
+    The number operator is diagonal, so no Jordan-Wigner string is needed.
+    Returns a real scalar (real part).
+    """
+    ops = fermion_operators(dtype=state.dtype if tc.is_complex(state)
+                            else tc.complex128, device=state.device)
+    val = dense_expect_local(state, ops["n"], site, N)
+    return val.real
+
+
+def dense_fermion_density_density(state, i: int, j: int, N: int) -> tc.Tensor:
+    """<n_i n_j> for a normalized dense fermion state vector (i != j).
+
+    Diagonal observable; no JW string needed. Returns a real scalar.
+    """
+    assert i != j, "density-density requires distinct sites"
+    ops = fermion_operators(dtype=state.dtype if tc.is_complex(state)
+                            else tc.complex128, device=state.device)
+    val = dense_expect_two_site(state, ops["n"], i, ops["n"], j, N)
+    return val.real
+
+
+def dense_fermion_nn_hopping(state, i: int, N: int) -> tc.Tensor:
+    """<c^d_i c_{i+1} + c^d_{i+1} c_i> for a normalized dense fermion state.
+
+    Nearest-neighbor hopping observable. Built with the explicit Jordan-Wigner
+    parity string F on sites 0..i-1 (matching the dense Hamiltonian's hopping
+    term), so it is a genuine fermionic observable. Returns a real scalar.
+    """
+    assert 0 <= i < N - 1, "NN hopping requires 0 <= i < N-1"
+    dt = state.dtype if tc.is_complex(state) else tc.complex128
+    dev = state.device
+    ops = fermion_operators(dtype=dt, device=dev)
+    c = ops["c"]
+    cdag = ops["cdag"]
+    lo, hi = (i, i + 1)
+    # c^d_i c_{i+1}  with JW string on sites 0..i-1
+    op_cdag_c = _fermion_global_two_site(cdag, lo, c, hi, N, dt, dev)
+    # c^d_{i+1} c_i : swap the two factors (still NN, JW string on 0..i-1)
+    op_c_cdag = _fermion_global_two_site(c, lo, cdag, hi, N, dt, dev)
+    val = state.conj() @ ((op_cdag_c + op_c_cdag) @ state)
+    return val.real
+
+
+def mps_fermion_local_density(mps, site: int) -> tc.Tensor:
+    """<n_site> of a fermion MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_fermion_local_density(psi, site, mps.N)
+
+
+def mps_fermion_density_density(mps, i: int, j: int) -> tc.Tensor:
+    """<n_i n_j> of a fermion MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_fermion_density_density(psi, i, j, mps.N)
+
+
+def mps_fermion_nn_hopping(mps, i: int) -> tc.Tensor:
+    """<c^d_i c_{i+1} + h.c.> of a fermion MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_fermion_nn_hopping(psi, i, mps.N)
+
+
+# ---------------------------------------------------------------------------
+# Spinful-Hubbard observables (Stage 7C)
+# ---------------------------------------------------------------------------
+#
+# Small-N dense-reference observables for the open-boundary 1D spinful Hubbard
+# chain. Like the spinless-fermion observables they are NOT full graded
+# fermionic tensors; they use the Jordan-Wigner construction (per-site parity
+# P = F_up x F_down on the left-factor site of each spin-resolved hop),
+# matching ``operators.hubbard_dense`` and ``MPO.generate_hubbard``.
+#
+# Local basis ``|0>, |up>, |down>, |up,down>`` (d=4); global mode ordering
+# site-major ``(0_up,0_down,1_up,1_down,...)``.
+#
+# - local <n_up_i>, <n_down_i>, <n_tot_i> : diagonal -> no JW string needed.
+# - double occupancy <n_up_i n_down_i>    : diagonal (on-site product) -> no
+#   JW string needed.
+# - NN spin-resolved hopping <c^d_{i,s} c_{i+1,s} + h.c.> : the GLOBAL product
+#   carries P on sites 0..i-1 from BOTH factors (which cancel) plus one
+#   surviving P at site i from the right factor's string -> the two-site
+#   operator is (c^d_sigma @ P) on site i, c_sigma on site i+1, plus its h.c.
+#   (P @ c_sigma) on site i, c^d_sigma on site i+1 — exactly the form used in
+#   ``operators.hubbard_dense``.
+# ---------------------------------------------------------------------------
+
+
+def _hubbard_global_two_site(op_i, i, op_i1, i1, N, dtype, device) -> tc.Tensor:
+    """Global two-site Hubbard operator with the per-site JW parity.
+
+    Builds the two-site operator with NO inter-site parity string (the two
+    factors' strings cancel on sites 0..i-1) and the given local 4x4 operators
+    at sites i and i1, identity elsewhere. The caller is responsible for
+    passing the correct (c^d_sigma @ P) / (P @ c_sigma) form for op_i (this
+    encapsulates the surviving site-i parity from the right factor's JW
+    string); op_i1 is the bare right-factor operator (c_sigma or c^d_sigma).
+    """
+    hop = hubbard_local_operators(dtype=dtype, device=device)
+    I = hop["I"]
+    assert i < i1, "use i < i1 (left factor first)"
+    term = None
+    for k in range(N):
+        if k == i:
+            g = op_i
+        elif k == i1:
+            g = op_i1
+        else:
+            g = I
+        term = g if term is None else tc.kron(term, g)
+    return term
+
+
+def dense_hubbard_local_density(state, site: int, N: int,
+                                spin: str = "tot") -> tc.Tensor:
+    """<n_{site, spin}> for a normalized dense Hubbard state vector.
+
+    spin in {"up", "down", "tot"}. The number operator is diagonal, so no JW
+    string is needed. Returns a real scalar (real part).
+    """
+    dt = state.dtype if tc.is_complex(state) else tc.complex128
+    dev = state.device
+    ops = hubbard_local_operators(dtype=dt, device=dev)
+    op = {"up": ops["nup"], "down": ops["ndown"], "tot": ops["ntot"]}[spin]
+    val = dense_expect_local(state, op, site, N)
+    return val.real
+
+
+def dense_hubbard_double_occ(state, site: int, N: int) -> tc.Tensor:
+    """<n_up_site n_down_site> (double occupancy) for a dense Hubbard state.
+
+    Diagonal on-site observable; no JW string. Returns a real scalar.
+    """
+    dt = state.dtype if tc.is_complex(state) else tc.complex128
+    dev = state.device
+    ops = hubbard_local_operators(dtype=dt, device=dev)
+    val = dense_expect_local(state, ops["double_occ"], site, N)
+    return val.real
+
+
+def dense_hubbard_local_sz(state, site: int, N: int) -> tc.Tensor:
+    """<S^z_site> = (1/2)(<n_up> - <n_down>) for a dense Hubbard state.
+
+    Diagonal; no JW string. Returns a real scalar.
+    """
+    dt = state.dtype if tc.is_complex(state) else tc.complex128
+    dev = state.device
+    ops = hubbard_local_operators(dtype=dt, device=dev)
+    val = dense_expect_local(state, ops["sz"], site, N)
+    return val.real
+
+
+def dense_hubbard_nn_hopping(state, i: int, N: int,
+                             spin: str = "up") -> tc.Tensor:
+    """<c^d_{i,s} c_{i+1,s} + h.c.> for a normalized dense Hubbard state.
+
+    Spin-resolved nearest-neighbor hopping observable. Built with the
+    surviving per-site parity P at the left-factor site (matching the dense
+    Hamiltonian's hopping term), so it is a genuine fermionic observable.
+    spin in {"up", "down"}. Returns a real scalar.
+    """
+    assert 0 <= i < N - 1, "NN hopping requires 0 <= i < N-1"
+    dt = state.dtype if tc.is_complex(state) else tc.complex128
+    dev = state.device
+    ops = hubbard_local_operators(dtype=dt, device=dev)
+    P = ops["parity"]
+    if spin == "up":
+        cdag, c = ops["cdagup"], ops["cup"]
+    elif spin == "down":
+        cdag, c = ops["cdagdown"], ops["cdown"]
+    else:
+        raise ValueError(f"spin must be 'up' or 'down', got {spin!r}")
+    lo, hi = (i, i + 1)
+    # c^d_{i,s} c_{i+1,s} : left factor (cdag @ P) at i, right factor c at i+1
+    op_cdag_c = _hubbard_global_two_site(cdag @ P, lo, c, hi, N, dt, dev)
+    # h.c. c^d_{i+1,s} c_i : left factor (P @ c) at i, right factor cdag at i+1
+    op_c_cdag = _hubbard_global_two_site(P @ c, lo, cdag, hi, N, dt, dev)
+    val = state.conj() @ ((op_cdag_c + op_c_cdag) @ state)
+    return val.real
+
+
+def mps_hubbard_local_density(mps, site: int, spin: str = "tot") -> tc.Tensor:
+    """<n_{site, spin}> of a Hubbard MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_hubbard_local_density(psi, site, mps.N, spin=spin)
+
+
+def mps_hubbard_double_occ(mps, site: int) -> tc.Tensor:
+    """<n_up_site n_down_site> of a Hubbard MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_hubbard_double_occ(psi, site, mps.N)
+
+
+def mps_hubbard_local_sz(mps, site: int) -> tc.Tensor:
+    """<S^z_site> of a Hubbard MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_hubbard_local_sz(psi, site, mps.N)
+
+
+def mps_hubbard_nn_hopping(mps, i: int, spin: str = "up") -> tc.Tensor:
+    """<c^d_{i,s} c_{i+1,s} + h.c.> of a Hubbard MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_hubbard_nn_hopping(psi, i, mps.N, spin=spin)

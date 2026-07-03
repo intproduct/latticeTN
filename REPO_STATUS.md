@@ -1,6 +1,6 @@
 # Repository Status
 
-Last updated: 2026-07-02 (Stage 6B bilingual docs + tutorials + MkDocs skeleton)
+Last updated: 2026-07-03 (Stage 7C spinful Hubbard chain via Jordan-Wigner)
 
 ## What this repository is
 
@@ -15,11 +15,14 @@ Classical DMRG / Lanczos are reference baselines, not the mainline.
 latticetn/            # the importable package (AD mainline + baselines)
   __init__.py
   mps.py              # MPS (trainable nn.Parameter site tensors)
-  mpo.py              # MPO builder (Heisenberg / TFI)
-  operators.py        # spin operators + dense Hamiltonians + ED reference
+  mpo.py              # MPO builder (Heisenberg / TFI / spinless fermion / Hubbard)
+  operators.py        # spin + fermion operators, dense Hamiltonians, ED reference
+  fermion_operators.py# spinless + spinful (Hubbard) fermion local ops + JW parity (Stage 7A/7C)
   contractions.py     # differentiable native contractions (the loss path)
-  observables.py      # dense-reference observables
+  observables.py      # dense-reference observables (spin + fermion + Hubbard)
   canonical.py        # SVD/QR canonicalization + compression (Stage 3A)
+  model_builder.py    # general 1D model spec + dense/MPO builders (Stage 7B/7C)
+  benchmarking.py     # unified CPU/GPU benchmark registry (Stage 7B)
   ad_variational.py   # Stage 4R global AD-MPS            [AD MAINLINE]
   ad_local.py         # Stage 5A AD local-tensor optim.   [AD MAINLINE]
   ad_two_site.py      # Stage 5B two-site AD local optim. [AD MAINLINE]
@@ -79,10 +82,14 @@ All run CPU-only, `torch.complex128`.
 | `python scripts/ad_local_opt_score.py --fast` | PASS |
 | `python scripts/ad_two_site_score.py --fast` | PASS |
 | `python scripts/ad_gpu_benchmark_score.py --fast` | PASS (CPU-only by default; GPU opt-in via `LATTICETN_RUN_GPU=1`) |
+| `python scripts/fermion_score.py --fast` | PASS (Stage 7A; CPU-only by default; GPU opt-in selects a V100/TITAN V via `scripts/gpu_selector.py`, else clean-skip) |
+| `python scripts/model_builder_score.py --fast` | PASS (Stage 7B; CPU-only by default; GPU opt-in via `LATTICETN_RUN_GPU=1` + unified selector) |
+| `python scripts/hubbard_score.py --fast` | PASS (Stage 7C; CPU-only by default; GPU opt-in via `LATTICETN_RUN_GPU=1` + unified selector) |
 
-Default `pytest -q` collects **233 tests, all under `tests/`** (Stage 5B was
-215; Stage 6A adds three benchmark test files); nothing under `legacy/` or
-`examples/` is collected.
+Default `pytest -q` collects **340 tests, all under `tests/`** (Stage 7B was
+244; Stage 7C adds eight Hubbard test files with 47 new tests, plus the
+existing collection growth); nothing under `legacy/` or `examples/` is
+collected.
 
 ## Legacy / archived code
 
@@ -102,8 +109,17 @@ caution. See `legacy/README.md`.
 - Future stages (XXZ/TFI, TEBD/TDVP) are described in `ROADMAP.md` but not
   started. Stage 5C (GPU AD benchmark, shipped as **Stage 6A**) and Stage 5B
   (two-site AD local optimization with optional bond growth) are **done**.
-  Stage 6B (bilingual docs + tutorials + MkDocs skeleton) is **done** — no
-  algorithm/physics/threshold changes; the user-facing docs now include a
-  computation-guide `USER_GUIDE.md`, a Chinese `USER_GUIDE.zh-CN.md`, six
-  bilingual tutorials, and an optional local MkDocs site
-  (`mkdocs.yml` + `requirements-docs.txt`).
+  Stage 6B (bilingual docs + tutorials + MkDocs skeleton) is **done**. Stage
+  7A (open-boundary 1D spinless fermion t-V chain via Jordan-Wigner + unified
+  V100/TITAN V GPU selector) is **done** — the AD mainline is unchanged; only
+  the Hamiltonian/MPO/operator layer is new; this is 1D JW fermions, not
+  graded fermionic tensors. Stage 7B (general 1D model builder + unified
+  CPU/GPU benchmark registry) is **done** — a model/MPO construction layer
+  (NOT a new solver) that abstracts Heisenberg and spinless fermion t-V behind
+  a `ModelSpec` interface and records the Stage-7A+ timing contract across
+  presets; the AD mainline is unchanged. Stage 7C (open-boundary 1D spinful
+  Hubbard chain via Jordan-Wigner) is **done** — adds `hubbard_local_operators`,
+  `hubbard_dense`, `MPO.generate_hubbard`, the `hubbard_model` preset, and
+  Hubbard observables on top of the unchanged AD mainline; 1D JW fermions
+  (site-major global ordering), NOT graded fermionic tensors; the dense
+  reference and MPO carry the per-site JW parity explicitly.

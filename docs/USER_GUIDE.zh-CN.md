@@ -138,6 +138,125 @@ print("Rayleigh E =", float(E.real), " exact E0 =", E0)
 随机 MPS 不是基态，所以 `E > E0`（变分上界）。关键检查：`E` 有限且实、
 `E >= E0 - 1e-8`、`E.requires_grad=True`。详见教程 01。
 
+### 3.1 无自旋费米子 t-V 链（Stage 7A，Jordan-Wigner）
+
+Stage 7A 在**不变**的 AD 主线之上增加了开边界一维无自旋费米子 t-V 链——
+损失路径与算子无关，所以只需替换 Hamiltonian/MPO。这是 1D Jordan-Wigner
+费米子，**不是**完整的 graded 费米子张量网络；JW 宇称串 `F = (-1)^n` 是关键
+（它让不同格点上的费米子算子反对易）。
+
+```python
+import torch as tc
+from latticetn.mps import MPS
+from latticetn.mpo import MPO
+from latticetn.contractions import rayleigh_energy_native
+from latticetn.operators import spinless_fermion_dense, exact_ground_energy
+from latticetn.fermion_operators import fermion_operators
+
+N, chi, dtype = 6, 8, tc.complex128
+# H = -t sum (c†_i c_{i+1}+h.c.) + V sum (n_i-1/2)(n_{i+1}-1/2) - mu sum (n_i-1/2)
+mps = MPS(N, 2, chi, dtype=dtype)
+mpo = MPO.from_bonds(N, 2, dtype=dtype, device="cpu").generate_spinless_fermion(
+    t=1.0, V=0.5, mu=0.0)
+
+E = rayleigh_energy_native(mps, mpo)            # 同一条可微损失路径
+E0, _ = exact_ground_energy(
+    spinless_fermion_dense(N, t=1.0, V=0.5, mu=0.0, dtype=dtype, device="cpu"))
+print("E =", float(E.real), " exact E0 =", E0)
+
+# 费米子可观测量（dense 参考；近邻 hopping 带有 JW 串）
+from latticetn.observables import (mps_fermion_local_density,
+    mps_fermion_nn_hopping)
+print("<n_0> =", float(mps_fermion_local_density(mps, 0).real))
+print("<c†_0 c_1 + h.c.> =", float(mps_fermion_nn_hopping(mps, 0).real))
+```
+
+三个 AD 主线 solver（`ad_variational.train_ad_mps`、`ad_local.train_ad_local`、
+`ad_two_site.train_ad_two_site`）在费米子 MPO 上不变即可用。CPU/GPU 计时使用
+**统一 GPU 选择器**（`scripts/gpu_selector.py`），只选 V100/TITAN V，否则
+clean-skip（不回退）。运行 `python scripts/fermion_score.py --fast`（CPU）或
+`LATTICETN_RUN_GPU=1 python scripts/fermion_score.py --fast`（opt-in GPU）。
+
+### 3.2 通用一维模型构建器 + 基准注册表（Stage 7B）
+
+Stage 7B 把 Heisenberg 与无自旋费米子 t-V 抽象成**统一的一维模型构建层**
+（`latticetn/model_builder.py`）。这是**模型/MPO 构建层，不是新求解器**——AD
+主线不变；构建器分发到既有已验证的生成器，物理与 Stage 1/7A 逐字节一致。
+
+```python
+import torch as tc
+from latticetn.model_builder import (heisenberg_model,
+    spinless_fermion_tv_model, build_dense, build_mpo)
+from latticetn.benchmarking import benchmark_model
+
+# 构造模型 spec，再构造 dense + MPO Hamiltonian。
+spec = spinless_fermion_tv_model(N=6, t=1.0, V=0.5, mu=0.0)
+H = build_dense(spec)          # == operators.spinless_fermion_dense（Stage 7A）
+mpo = build_mpo(spec)          # == MPO.generate_spinless_fermion（Stage 7A）
+
+# 统一 CPU/GPU 基准注册表（Stage 7A+ 计时契约）。
+r = benchmark_model(spec, chi=8, seed=0, steps=120)
+# r["cpu"]、r["gpu"]（或 None + skip 原因）、r["speedup"]、r["exact_energy"]……
+```
+
+`ModelSpec` 带有显式 `statistics`（"boson"/"fermion"）和项列表（`OnsiteTerm`、
+`TwoSiteTerm` 用于玻色/自旋；`FermionHopTerm` + `DensityDensityTerm` 用于
+费米/JW）。费米子项保留 JW 宇称串（不退化为 hard-core boson）。运行
+`python scripts/model_builder_score.py --fast`（CPU）或
+`LATTICETN_RUN_GPU=1 python scripts/model_builder_score.py --fast`（opt-in GPU，
+V100/TITAN V）。
+
+### 3.3 自旋 Hubbard 链（Stage 7C，Jordan-Wigner）
+
+Stage 7C 在**不变的** AD 主线之上加入开放边界一维**自旋 Hubbard 链**。模型为
+
+```
+H = -t Σ_{i,s}(c†_{i,s} c_{i+1,s} + h.c.)
+    + U Σ_i (n_{i,↑}-1/2)(n_{i,↓}-1/2)
+    - μ Σ_i (n_{i,↑}+n_{i,↓}-1) - h Σ_i (n_{i,↑}-n_{i,↓})
+```
+
+局域基 `|0>、|↑>、|↓>、|↑↓>`（d=4）；全局模式排序固定为**site-major**
+`(0↑,0↓,1↑,1↓,…)`。这是一维 Jordan-Wigner 费米子，**不是**完整的 graded
+fermionic 张量网络；逐位 JW 宇称 `P = F_↑ ⊗ F_↓`（加上局域 `cdown`/`cdagdown`
+内部已含的 `F_↑`）是关键。
+
+```python
+import torch as tc
+from latticetn.model_builder import hubbard_model, build_dense, build_mpo
+from latticetn import contractions as K
+from latticetn.operators import hubbard_dense, exact_ground_energy
+
+N, chi, dtype = 4, 4, tc.complex128
+spec = hubbard_model(N, t=1.0, U=4.0, mu=0.0, h=0.0)
+H = build_dense(spec)          # == operators.hubbard_dense（完整 2N 模 JW）
+mpo = build_mpo(spec)          # == MPO.generate_hubbard（bond 维 6，d=4）
+assert tc.allclose(mpo.to_dense(), H, atol=1e-12)
+
+# 可微 Rayleigh 能量（与算子无关的 AD 主线）：
+tc.manual_seed(0)
+from latticetn.mps import MPS
+mps = MPS(N, 4, chi, dtype=dtype)
+E = K.rayleigh_energy_native(mps, mpo)        # <ψ|H|ψ>/<ψ|ψ>
+
+# 参考基线（不是 AD 路径）：
+E0, _ = exact_ground_energy(hubbard_dense(N, t=1.0, U=4.0, dtype=dtype))
+
+# Hubbard 观测量（dense 参考；自旋分辨 NN 跃迁携带左因子位的存活 P）：
+from latticetn.observables import (mps_hubbard_local_density,
+    mps_hubbard_double_occ, mps_hubbard_local_sz, mps_hubbard_nn_hopping)
+print("<n_↑_0>  =", float(mps_hubbard_local_density(mps, 0, "up").real))
+print("<docc_0> =", float(mps_hubbard_double_occ(mps, 0).real))
+print("<Sz_0>   =", float(mps_hubbard_local_sz(mps, 0).real))
+print("<c†_{0,↑} c_{1,↑}+h.c.> =",
+      float(mps_hubbard_nn_hopping(mps, 0, "up").real))
+```
+
+三个 AD 主线求解器（`train_ad_mps`、`train_ad_local`、`train_ad_two_site`）
+在 Hubbard MPO 上原样工作。CPU/GPU 计时使用**统一 GPU 选择器**（仅
+V100/TITAN V，不回退）。运行 `python scripts/hubbard_score.py --fast`（CPU）
+或 `LATTICETN_RUN_GPU=1 python scripts/hubbard_score.py --fast`（opt-in GPU）。
+
 ---
 
 ## 4. 全局 AD-MPS 训练（Stage 4R）

@@ -132,6 +132,135 @@ print("E =", float(E.real), " exact E0 =", E0)   # E >> E0 for a random MPS
 reached through the standalone, scalable contraction module — and it is the
 function the AD solvers use as their loss.
 
+### 3.1 Spinless fermion t-V chain (Stage 7A, Jordan-Wigner)
+
+Stage 7A adds the open-boundary 1D spinless fermion t-V chain on top of the
+**unchanged** AD mainline — the loss path is operator-agnostic, so you just
+swap the Hamiltonian/MPO. This is 1D Jordan-Wigner fermions, **not** a full
+graded fermionic tensor network; the JW parity string `F = (-1)^n` is the key
+(it makes fermionic operators on different sites anticommute).
+
+```python
+import torch as tc
+from latticetn.mps import MPS
+from latticetn.mpo import MPO
+from latticetn.contractions import rayleigh_energy_native
+from latticetn.operators import spinless_fermion_dense, exact_ground_energy
+from latticetn.fermion_operators import fermion_operators
+
+N, chi, dtype = 6, 8, tc.complex128
+# H = -t sum (c^d_i c_{i+1}+h.c.) + V sum (n_i-1/2)(n_{i+1}-1/2) - mu sum (n_i-1/2)
+mps = MPS(N, 2, chi, dtype=dtype)
+mpo = MPO.from_bonds(N, 2, dtype=dtype, device="cpu").generate_spinless_fermion(
+    t=1.0, V=0.5, mu=0.0)
+
+E = rayleigh_energy_native(mps, mpo)            # differentiable, same loss path
+E0, _ = exact_ground_energy(
+    spinless_fermion_dense(N, t=1.0, V=0.5, mu=0.0, dtype=dtype, device="cpu"))
+print("E =", float(E.real), " exact E0 =", E0)
+
+# fermion observables (dense-reference; NN hopping carries the JW string)
+from latticetn.observables import (mps_fermion_local_density,
+    mps_fermion_nn_hopping)
+print("<n_0> =", float(mps_fermion_local_density(mps, 0).real))
+print("<c^d_0 c_1 + h.c.> =", float(mps_fermion_nn_hopping(mps, 0).real))
+```
+
+The three AD mainline solvers (`ad_variational.train_ad_mps`,
+`ad_local.train_ad_local`, `ad_two_site.train_ad_two_site`) work on the fermion
+MPO unchanged. CPU/GPU timing uses the **unified GPU selector**
+(`scripts/gpu_selector.py`), which selects a V100/TITAN V and clean-skips
+otherwise (no fallback). Run `python scripts/fermion_score.py --fast` (CPU) or
+`LATTICETN_RUN_GPU=1 python scripts/fermion_score.py --fast` (opt-in GPU).
+
+### 3.2 General 1D model builder + benchmark registry (Stage 7B)
+
+Stage 7B abstracts the Heisenberg and spinless-fermion t-V Hamiltonians behind
+a **unified 1D model-construction layer** (`latticetn/model_builder.py`). This
+is a **model/MPO construction layer, NOT a new solver** — the AD mainline is
+unchanged; the builders dispatch to the existing validated generators so the
+physics is byte-identical to Stage 1/7A.
+
+```python
+import torch as tc
+from latticetn.model_builder import (heisenberg_model,
+    spinless_fermion_tv_model, build_dense, build_mpo)
+from latticetn.benchmarking import benchmark_model
+
+# Build a model spec, then its dense + MPO Hamiltonians.
+spec = spinless_fermion_tv_model(N=6, t=1.0, V=0.5, mu=0.0)
+H = build_dense(spec)          # == operators.spinless_fermion_dense (Stage 7A)
+mpo = build_mpo(spec)          # == MPO.generate_spinless_fermion (Stage 7A)
+
+# Unified CPU/GPU benchmark registry (Stage 7A+ timing contract).
+r = benchmark_model(spec, chi=8, seed=0, steps=120)
+# r["cpu"], r["gpu"] (or None + skip reason), r["speedup"], r["exact_energy"], ...
+```
+
+The `ModelSpec` carries an explicit `statistics` ("boson"|"fermion") and a
+list of terms (`OnsiteTerm`, `TwoSiteTerm` for bosonic/spin, `FermionHopTerm`
++ `DensityDensityTerm` for fermionic/JW). Fermion terms keep the JW parity
+string (no hard-core-boson degradation). Run
+`python scripts/model_builder_score.py --fast` (CPU) or
+`LATTICETN_RUN_GPU=1 python scripts/model_builder_score.py --fast` (opt-in GPU,
+V100/TITAN V).
+
+### 3.3 Spinful Hubbard chain (Stage 7C, Jordan-Wigner)
+
+Stage 7C adds the open-boundary 1D **spinful Hubbard chain** on top of the
+**unchanged** AD mainline. The model is
+
+```
+H = -t sum_{i,s} (c^d_{i,s} c_{i+1,s} + h.c.)
+    + U sum_i (n_{i,up}-1/2)(n_{i,down}-1/2)
+    - mu sum_i (n_{i,up}+n_{i,down}-1) - h sum_i (n_{i,up}-n_{i,down})
+```
+
+Local basis `|0>, |up>, |down>, |up,down>` (d=4); global mode ordering is
+fixed to **site-major** `(0_up,0_down,1_up,1_down,...)`. This is 1D
+Jordan-Wigner fermions, **not** a full graded fermionic tensor network; the
+per-site JW parity `P = F_up x F_down` (plus the intra-site `F_up` already
+inside the local `cdown`/`cdagdown`) is the key.
+
+```python
+import torch as tc
+from latticetn.model_builder import hubbard_model, build_dense, build_mpo
+from latticetn import contractions as K
+from latticetn.operators import hubbard_dense, exact_ground_energy
+from latticetn.fermion_operators import hubbard_local_operators
+
+N, chi, dtype = 4, 4, tc.complex128
+spec = hubbard_model(N, t=1.0, U=4.0, mu=0.0, h=0.0)
+H = build_dense(spec)          # == operators.hubbard_dense (full 2N-mode JW)
+mpo = build_mpo(spec)          # == MPO.generate_hubbard (bond dim 6, d=4)
+assert tc.allclose(mpo.to_dense(), H, atol=1e-12)
+
+# differentiable Rayleigh energy (operator-agnostic AD mainline):
+tc.manual_seed(0)
+from latticetn.mps import MPS
+mps = MPS(N, 4, chi, dtype=dtype)
+E = K.rayleigh_energy_native(mps, mpo)        # <psi|H|psi>/<psi|psi>
+
+# reference baseline (NOT the AD path):
+E0, _ = exact_ground_energy(hubbard_dense(N, t=1.0, U=4.0, dtype=dtype))
+
+# Hubbard observables (dense-reference; spin-resolved NN hopping carries the
+# surviving per-site parity P at the left-factor site):
+from latticetn.observables import (mps_hubbard_local_density,
+    mps_hubbard_double_occ, mps_hubbard_local_sz, mps_hubbard_nn_hopping)
+print("<n_up_0>   =", float(mps_hubbard_local_density(mps, 0, "up").real))
+print("<docc_0>   =", float(mps_hubbard_double_occ(mps, 0).real))
+print("<Sz_0>     =", float(mps_hubbard_local_sz(mps, 0).real))
+print("<c^d_{0,up} c_{1,up}+h.c.> =",
+      float(mps_hubbard_nn_hopping(mps, 0, "up").real))
+```
+
+The three AD mainline solvers (`train_ad_mps`, `train_ad_local`,
+`train_ad_two_site`) work on the Hubbard MPO unchanged. CPU/GPU timing uses
+the **unified GPU selector** (V100/TITAN V only, no fallback). Run
+`python scripts/hubbard_score.py --fast` (CPU) or
+`LATTICETN_RUN_GPU=1 python scripts/hubbard_score.py --fast` (opt-in GPU).
+
 ---
 
 ## 4. Global AD-MPS training (Stage 4R)

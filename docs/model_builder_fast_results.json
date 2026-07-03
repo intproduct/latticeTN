@@ -1,0 +1,411 @@
+{
+  "convention": "Stage 7B unified 1D model builder + benchmark registry. Open boundary, d=2, complex128. Heisenberg uses S=sigma/2; spinless fermion t-V uses Jordan-Wigner (parity string F=(-1)^n). AD mainline unchanged; this is a model/MPO construction layer.",
+  "dtype": "torch.complex128",
+  "mainline_statement": "This benchmark evaluates the AD mainline solver (global AD-MPS) across the registered 1D model presets via the unified model builder + benchmark registry, on CPU and (opt-in) a V100/TITAN V GPU. Exact diagonalization is a reference baseline ONLY. The AD loss path is unchanged; Stage 7B adds only the model/MPO builder and benchmark registry layers.",
+  "results": [
+    {
+      "model": "heisenberg",
+      "N": 4,
+      "chi": 4,
+      "seed": 0,
+      "dtype": "torch.complex128",
+      "exact_energy": -1.616025403784439,
+      "cpu": {
+        "model": "heisenberg",
+        "N": 4,
+        "chi": 4,
+        "solver": "global AD-MPS",
+        "device": "cpu",
+        "device_name": "cpu",
+        "dtype": "torch.complex128",
+        "runtime": 2.002017699996941,
+        "speedup": null,
+        "final_energy": -1.6159638811727501,
+        "exact_error": 6.152261168890227e-05,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu": {
+        "model": "heisenberg",
+        "N": 4,
+        "chi": 4,
+        "solver": "global AD-MPS",
+        "device": "cuda:0",
+        "device_name": "Tesla V100-SXM2-16GB",
+        "dtype": "torch.complex128",
+        "runtime": 1.776640700059943,
+        "speedup": 1.1268557001589539,
+        "final_energy": -1.6159638811727497,
+        "exact_error": 6.152261168934636e-05,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu_skip_reason": null,
+      "gpu_ran": true,
+      "speedup": 1.1268557001589539,
+      "cpu_gpu_energy_diff": 4.440892098500626e-16,
+      "device_info": {
+        "torch_version": "2.10.0+cu128",
+        "cuda_version": "12.8",
+        "cuda_available": true,
+        "device_count": 3,
+        "gpu_name": "Tesla V100-SXM2-16GB",
+        "device": "cuda:0",
+        "source": "nvidia-smi",
+        "all_gpus": [
+          {
+            "index": 0,
+            "name": "NVIDIA RTX PRO 4000 Blackwell"
+          },
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "matched_gpus": [
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "allowed_filters": [
+          "V100",
+          "TITAN V",
+          "Titan V"
+        ],
+        "env_run_gpu": true,
+        "skip_reason": null,
+        "gpu_ran": true
+      },
+      "params": {
+        "J/t": 1.0,
+        "V": 0.0,
+        "mu": 0.0
+      }
+    },
+    {
+      "model": "heisenberg",
+      "N": 6,
+      "chi": 8,
+      "seed": 0,
+      "dtype": "torch.complex128",
+      "exact_energy": -2.493577133887926,
+      "cpu": {
+        "model": "heisenberg",
+        "N": 6,
+        "chi": 8,
+        "solver": "global AD-MPS",
+        "device": "cpu",
+        "device_name": "cpu",
+        "dtype": "torch.complex128",
+        "runtime": 1.0660470000002533,
+        "speedup": null,
+        "final_energy": -2.49241836472881,
+        "exact_error": 0.0011587691591157245,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu": {
+        "model": "heisenberg",
+        "N": 6,
+        "chi": 8,
+        "solver": "global AD-MPS",
+        "device": "cuda:0",
+        "device_name": "Tesla V100-SXM2-16GB",
+        "dtype": "torch.complex128",
+        "runtime": 2.102076799958013,
+        "speedup": 0.507139891378634,
+        "final_energy": -2.492418364728811,
+        "exact_error": 0.0011587691591148364,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu_skip_reason": null,
+      "gpu_ran": true,
+      "speedup": 0.507139891378634,
+      "cpu_gpu_energy_diff": 8.881784197001252e-16,
+      "device_info": {
+        "torch_version": "2.10.0+cu128",
+        "cuda_version": "12.8",
+        "cuda_available": true,
+        "device_count": 3,
+        "gpu_name": "Tesla V100-SXM2-16GB",
+        "device": "cuda:0",
+        "source": "nvidia-smi",
+        "all_gpus": [
+          {
+            "index": 0,
+            "name": "NVIDIA RTX PRO 4000 Blackwell"
+          },
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "matched_gpus": [
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "allowed_filters": [
+          "V100",
+          "TITAN V",
+          "Titan V"
+        ],
+        "env_run_gpu": true,
+        "skip_reason": null,
+        "gpu_ran": true
+      },
+      "params": {
+        "J/t": 1.0,
+        "V": 0.0,
+        "mu": 0.0
+      }
+    },
+    {
+      "model": "spinless_fermion_tv",
+      "N": 4,
+      "chi": 4,
+      "seed": 0,
+      "dtype": "torch.complex128",
+      "exact_energy": -2.4679289750386113,
+      "cpu": {
+        "model": "spinless_fermion_tv",
+        "N": 4,
+        "chi": 4,
+        "solver": "global AD-MPS",
+        "device": "cpu",
+        "device_name": "cpu",
+        "dtype": "torch.complex128",
+        "runtime": 0.7115180999971926,
+        "speedup": null,
+        "final_energy": -2.467779115969287,
+        "exact_error": 0.00014985906932452053,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu": {
+        "model": "spinless_fermion_tv",
+        "N": 4,
+        "chi": 4,
+        "solver": "global AD-MPS",
+        "device": "cuda:0",
+        "device_name": "Tesla V100-SXM2-16GB",
+        "dtype": "torch.complex128",
+        "runtime": 1.4192708000773564,
+        "speedup": 0.5013265262403848,
+        "final_energy": -2.467779115969286,
+        "exact_error": 0.0001498590693254087,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu_skip_reason": null,
+      "gpu_ran": true,
+      "speedup": 0.5013265262403848,
+      "cpu_gpu_energy_diff": 8.881784197001252e-16,
+      "device_info": {
+        "torch_version": "2.10.0+cu128",
+        "cuda_version": "12.8",
+        "cuda_available": true,
+        "device_count": 3,
+        "gpu_name": "Tesla V100-SXM2-16GB",
+        "device": "cuda:0",
+        "source": "nvidia-smi",
+        "all_gpus": [
+          {
+            "index": 0,
+            "name": "NVIDIA RTX PRO 4000 Blackwell"
+          },
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "matched_gpus": [
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "allowed_filters": [
+          "V100",
+          "TITAN V",
+          "Titan V"
+        ],
+        "env_run_gpu": true,
+        "skip_reason": null,
+        "gpu_ran": true
+      },
+      "params": {
+        "J/t": 1.0,
+        "V": 0.5,
+        "mu": 0.0
+      }
+    },
+    {
+      "model": "spinless_fermion_tv",
+      "N": 6,
+      "chi": 8,
+      "seed": 0,
+      "dtype": "torch.complex128",
+      "exact_energy": -3.8325138949140185,
+      "cpu": {
+        "model": "spinless_fermion_tv",
+        "N": 6,
+        "chi": 8,
+        "solver": "global AD-MPS",
+        "device": "cpu",
+        "device_name": "cpu",
+        "dtype": "torch.complex128",
+        "runtime": 1.0638432999840006,
+        "speedup": null,
+        "final_energy": -3.8291809683720945,
+        "exact_error": 0.003332926541923964,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu": {
+        "model": "spinless_fermion_tv",
+        "N": 6,
+        "chi": 8,
+        "solver": "global AD-MPS",
+        "device": "cuda:0",
+        "device_name": "Tesla V100-SXM2-16GB",
+        "dtype": "torch.complex128",
+        "runtime": 2.1145908000180498,
+        "speedup": 0.5030965328965395,
+        "final_energy": -3.8291809683720928,
+        "exact_error": 0.0033329265419257403,
+        "below_ground": false,
+        "gpu_skip_reason": null,
+        "extra": {}
+      },
+      "gpu_skip_reason": null,
+      "gpu_ran": true,
+      "speedup": 0.5030965328965395,
+      "cpu_gpu_energy_diff": 1.7763568394002505e-15,
+      "device_info": {
+        "torch_version": "2.10.0+cu128",
+        "cuda_version": "12.8",
+        "cuda_available": true,
+        "device_count": 3,
+        "gpu_name": "Tesla V100-SXM2-16GB",
+        "device": "cuda:0",
+        "source": "nvidia-smi",
+        "all_gpus": [
+          {
+            "index": 0,
+            "name": "NVIDIA RTX PRO 4000 Blackwell"
+          },
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "matched_gpus": [
+          {
+            "index": 1,
+            "name": "Tesla V100-SXM2-16GB"
+          },
+          {
+            "index": 2,
+            "name": "Tesla V100-SXM2-16GB"
+          }
+        ],
+        "allowed_filters": [
+          "V100",
+          "TITAN V",
+          "Titan V"
+        ],
+        "env_run_gpu": true,
+        "skip_reason": null,
+        "gpu_ran": true
+      },
+      "params": {
+        "J/t": 1.0,
+        "V": 0.5,
+        "mu": 0.0
+      }
+    }
+  ],
+  "gpu_ran": true,
+  "gpu_skip_reason": null,
+  "device_info": {
+    "torch_version": "2.10.0+cu128",
+    "cuda_version": "12.8",
+    "cuda_available": true,
+    "device_count": 3,
+    "gpu_name": "Tesla V100-SXM2-16GB",
+    "device": "cuda:0",
+    "source": "nvidia-smi",
+    "all_gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA RTX PRO 4000 Blackwell"
+      },
+      {
+        "index": 1,
+        "name": "Tesla V100-SXM2-16GB"
+      },
+      {
+        "index": 2,
+        "name": "Tesla V100-SXM2-16GB"
+      }
+    ],
+    "matched_gpus": [
+      {
+        "index": 1,
+        "name": "Tesla V100-SXM2-16GB"
+      },
+      {
+        "index": 2,
+        "name": "Tesla V100-SXM2-16GB"
+      }
+    ],
+    "allowed_filters": [
+      "V100",
+      "TITAN V",
+      "Titan V"
+    ],
+    "env_run_gpu": true,
+    "skip_reason": null,
+    "gpu_ran": true
+  },
+  "pass": true
+}

@@ -10,8 +10,8 @@ The **GPU benchmark evaluates the AD mainline solvers** (global AD-MPS, one-site
 
 ## Device info
 
-- PyTorch version: `2.12.0+cu126`
-- CUDA version: `12.6`
+- PyTorch version: `2.10.0+cu128`
+- CUDA version: `12.8`
 - CUDA available: `True`
 - GPU device count: `0`
 - GPU name: `None`
@@ -33,8 +33,8 @@ The GPU portion was not run (clean skip). The CPU benchmark ran normally; the re
 
 | N | exact E0 | DMRG E | DMRG runtime_s |
 |---:|---:|---:|---:|
-| 4 | -1.6160254038 | -1.6160254038 | 0.364 |
-| 6 | -2.4935771339 | -2.4935771339 | 1.582 |
+| 4 | -1.6160254038 | -1.6160254038 | 0.053 |
+| 6 | -2.4935771339 | -2.4935771339 | 0.248 |
 
 Exact diagonalization (`numpy.linalg.eigh`) and dense DMRG are classical reference baselines; they are **not** part of the AD optimization path.
 
@@ -42,9 +42,9 @@ Exact diagonalization (`numpy.linalg.eigh`) and dense DMRG are classical referen
 
 | solver | optimizer | device | final E | energy error | E / bond | runtime_s | below ground |
 |---|:---:|:---:|---:|---:|---:|---:|:---:|
-| global AD-MPS | adam | cpu | -1.6160223657 | 3.04e-06 | -0.5386741219 | 5.539 | False |
-| one-site AD local | lbfgs | cpu | -1.6160254037 | 4.19e-11 | -0.5386751346 | 0.321 | False |
-| two-site AD local | lbfgs | cpu | -1.6160254036 | 1.82e-10 | -0.5386751345 | 0.124 | False |
+| global AD-MPS | adam | cpu | -1.6160223657 | 3.04e-06 | -0.5386741219 | 2.148 | False |
+| one-site AD local | lbfgs | cpu | -1.6160254037 | 4.19e-11 | -0.5386751346 | 0.101 | False |
+| two-site AD local | lbfgs | cpu | -1.6160254036 | 1.82e-10 | -0.5386751345 | 0.033 | False |
 
 _GPU portion skipped — see Device info above._
 
@@ -52,9 +52,9 @@ _GPU portion skipped — see Device info above._
 
 | solver | optimizer | device | final E | energy error | E / bond | runtime_s | below ground |
 |---|:---:|:---:|---:|---:|---:|---:|:---:|
-| global AD-MPS | adam | cpu | -2.4934815147 | 9.56e-05 | -0.4986963029 | 6.972 | False |
-| one-site AD local | lbfgs | cpu | -2.4935771330 | 8.91e-10 | -0.4987154266 | 0.863 | False |
-| two-site AD local | lbfgs | cpu | -2.4935771330 | 8.39e-10 | -0.4987154266 | 0.263 | False |
+| global AD-MPS | adam | cpu | -2.4934815147 | 9.56e-05 | -0.4986963029 | 2.222 | False |
+| one-site AD local | lbfgs | cpu | -2.4935771330 | 8.91e-10 | -0.4987154266 | 0.254 | False |
+| two-site AD local | lbfgs | cpu | -2.4935771330 | 8.39e-10 | -0.4987154266 | 0.078 | False |
 
 _GPU portion skipped — see Device info above._
 

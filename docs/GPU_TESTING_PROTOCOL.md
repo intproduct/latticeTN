@@ -118,3 +118,51 @@ Stage 2.5 is complete when:
 - No changes to Stage 1/2 physics conventions or thresholds.
 - No `.detach()`/`.data`/unnecessary `.item()` in the differentiable energy path.
 - No large new dependencies (torch/numpy only).
+
+## Stage 7A onward — unified GPU selector (V100 / TITAN V)
+
+From Stage 7A, the canonical GPU selector is `scripts/gpu_selector.py`. It is
+**unified**: shared by the fermion score scripts/tests (Stage 7A) and the
+model-builder benchmark registry (Stage 7B), and available to any future
+stage. It replaces the per-script duplicated selection logic of Stage
+2.5/6A for new work (the older scripts are left as-is for traceability).
+
+Stage 7B reuses this selector unchanged: `latticetn/benchmarking.py` calls
+`scripts/gpu_selector.select_gpu()` to pick the V100/TITAN V for the unified
+benchmark registry across all registered model presets.
+
+Selection rule (Stage 7A):
+- Pick a GPU whose name (case-insensitive) contains `V100` OR `TITAN V` (the
+  `Titan V` spelling also matches because the match is case-insensitive).
+- These are the GPUs admissible for Stage 7A CPU/GPU timing.
+
+Opt-in + clean-skip (unchanged philosophy):
+- GPU use is opt-in via `LATTICETN_RUN_GPU=1`.
+- If no matching GPU is present (or GPU not opted in), the GPU portion
+  **clean-skips** (exit 0; CPU results still recorded; no fallback to
+  `cuda:0` or any other GPU).
+- If a matching GPU is present, Stage 7A runs CPU and GPU small-system tests
+  and records, per run: device name, dtype, N, chi, solver, final energy,
+  exact error, runtime, speedup, below_ground.
+
+Discovery + index resolution:
+- `nvidia-smi --query-gpu=index,name --format=csv,noheader` (preferred), with
+  a `torch.cuda.get_device_name(i)` fallback.
+- The device actually used is resolved by RE-MATCHING the name against the
+  current torch-visible devices, so the torch logical index always points at
+  the matched GPU regardless of nvidia-smi vs torch ordering (e.g. when
+  `CUDA_VISIBLE_DEVICES` already hides other GPUs).
+
+Stage 7A commands:
+
+```bash
+# CPU-only (default):
+python scripts/fermion_score.py --fast
+
+# Opt-in GPU (runs only if a V100/TITAN V is selected by gpu_selector):
+LATTICETN_RUN_GPU=1 python scripts/fermion_score.py --fast
+```
+
+The GPU is **not** required to be faster; speedup is recorded only to observe
+AD-TN GPU acceleration trends (small systems are overhead-dominated).
+
