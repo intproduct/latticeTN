@@ -258,3 +258,94 @@ Current failing test or bottleneck:
 
 Next action:
 Report Stage 9 completion status.
+
+## Checkpoint Stage 10-1: Structured ModelSpec Runner Contract
+
+Goal:
+Add a stable Stage 10 backend contract: structured ModelSpec, preset registry,
+unified Hamiltonian-to-MPO builder, method/runtime/observable/result schemas,
+Python runner API, job JSON CLI, and example job.
+
+Files changed:
+- Added `latticetn/model_spec.py`
+- Added `latticetn/model_registry.py`
+- Added `latticetn/hamiltonian_builder.py`
+- Added `latticetn/config_schema.py`
+- Added `latticetn/runner.py`
+- Added `scripts/run_latticetn_job.py`
+- Added `examples/jobs/hubbard_ad_hard_N4.json`
+- Added `tests/test_model_spec.py`
+- Added `tests/test_model_registry.py`
+- Added `tests/test_hamiltonian_builder.py`
+- Added `tests/test_runner_schema.py`
+- Added `tests/test_run_latticetn_job_cli.py`
+- Added `docs/STAGE10_MODELSPEC_RUNNER.md`
+- Updated `scripts/run_ad_model_benchmark.py` to translate legacy CLI args into
+  Stage 10 schemas and run through `run_latticetn_job`.
+- Updated `latticetn/__init__.py`
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_model_spec.py tests/test_model_registry.py tests/test_hamiltonian_builder.py tests/test_runner_schema.py tests/test_run_latticetn_job_cli.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage10`
+
+Result:
+- Stage 10 targeted tests: 15 passed.
+- Runner API supports AD-DMRG and a classical DMRG entry for Heisenberg.
+- Classical DMRG entry avoids the old `run_dmrg()` ED context path and reports
+  `classical_dmrg_used=true`, `lanczos_used=true`, `ad_used=false`.
+- AD-DMRG reports `ad_used=true`, `ed_used=false`,
+  `classical_dmrg_used=false`, and `lanczos_used=false`.
+
+Current failing test or bottleneck:
+- None in Stage 10 targeted tests.
+
+Next action:
+Run Stage 8/9 compatibility tests, legacy benchmark CLI tests, full pytest, and
+fast validation.
+
+## Checkpoint Stage 10-2: Verification and Compatibility Audit
+
+Goal:
+Verify Stage 10 with Stage 8/9 compatibility, legacy AD benchmark compatibility,
+full pytest, fast validation, example CLI commands, and source-policy audit.
+
+Files changed:
+- Updated `tests/test_ad_model_benchmark_cli.py` to cover `--model-spec-json`.
+- Updated `scripts/run_ad_model_benchmark.py` so model-spec JSON mode preserves
+  legacy stdout and legacy-compatible JSON output.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_charge_metadata.py tests/test_fixed_sector_initial_states.py tests/test_sector_observables.py tests/test_ad_model_benchmark_cli.py tests/test_charge_sectors.py tests/test_charge_masks.py tests/test_hard_sector_initial_states.py tests/test_hard_sector_ad_runner.py tests/test_model_spec.py tests/test_model_registry.py tests/test_hamiltonian_builder.py tests/test_runner_schema.py tests/test_run_latticetn_job_cli.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage8910`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q --basetemp D:\AI\latticeTN\.tmp_pytest_full_stage10`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_latticetn_job.py --job-json examples/jobs/hubbard_ad_hard_N4.json --output D:\AI\latticeTN\.tmp_stage10_job_result.json`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_ad_model_benchmark.py --model hubbard --N 4 --chi 4 --sweeps 1 --device cpu --dtype complex128 --init hubbard_neel --optimizer adam --local-steps 1 --lr 0.01 --target-nup 2 --target-ndown 2 --sector-mode hard --no-ed --output D:\AI\latticeTN\.tmp_stage10_legacy_ad.json`
+- `rg -n "exact_ground_energy|build_dense|to_dense\(" scripts/run_ad_model_benchmark.py latticetn/runner.py scripts/run_latticetn_job.py`
+- `rg -n "from \.dmrg|import \.dmrg|from \.lanczos|import \.lanczos|from latticetn\.dmrg|from latticetn\.lanczos" scripts/run_ad_model_benchmark.py scripts/run_latticetn_job.py`
+- `rg -n "V100|A100|RTX" scripts/run_ad_model_benchmark.py scripts/run_latticetn_job.py latticetn/model_spec.py latticetn/model_registry.py latticetn/hamiltonian_builder.py latticetn/config_schema.py latticetn/runner.py docs/STAGE10_MODELSPEC_RUNNER.md tests/test_model_spec.py tests/test_model_registry.py tests/test_hamiltonian_builder.py tests/test_runner_schema.py tests/test_run_latticetn_job_cli.py`
+
+Result:
+- Stage 8/9/10 targeted tests: 40 passed.
+- Fast validation score: PASS.
+- Full pytest suite: exited 0.
+- Example `scripts/run_latticetn_job.py` Hubbard hard-sector job ran and wrote
+  result JSON with `ad_used=true`, `ed_used=false`, `classical_dmrg_used=false`,
+  and `lanczos_used=false`.
+- Legacy `scripts/run_ad_model_benchmark.py` hard-sector Hubbard command ran
+  through the Stage 10 schema runner and preserved old policy output:
+  `ED status = skipped by design` and `classical DMRG/Lanczos = not used`.
+- Source audit found no ED/dense-builder/dense-state calls in Stage 10 runner
+  paths checked. `scripts/run_ad_model_benchmark.py` and
+  `scripts/run_latticetn_job.py` do not import DMRG/Lanczos directly. The
+  package runner lazily imports DMRG only inside the explicit classical DMRG
+  branch.
+- No hardcoded GPU model names were found in the new Stage 10 files checked.
+- Generated JSON verification outputs were removed. Pytest temp directories
+  remain because Windows ACLs denied deletion, matching earlier environment
+  behavior.
+
+Current failing test or bottleneck:
+- None.
+
+Next action:
+Report Stage 10 completion status.

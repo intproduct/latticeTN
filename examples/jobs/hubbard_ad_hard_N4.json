@@ -1,0 +1,35 @@
+{
+  "model_spec": {
+    "name": "hubbard",
+    "N": 4,
+    "boundary": "obc",
+    "parameters": {
+      "t": 1.0,
+      "U": 4.0,
+      "mu": 0.0,
+      "h": 0.0
+    },
+    "sector": {
+      "mode": "hard",
+      "target_nup": 2,
+      "target_ndown": 2
+    }
+  },
+  "method_config": {
+    "name": "ad_dmrg",
+    "chi": 4,
+    "sweeps": 1,
+    "optimizer": "adam",
+    "local_steps": 1,
+    "lr": 0.01,
+    "sector_mode": "hard"
+  },
+  "runtime_config": {
+    "device": "cpu",
+    "dtype": "complex128",
+    "no_ed": true
+  },
+  "observables": {
+    "names": ["energy", "sector", "bond_dims"]
+  }
+}

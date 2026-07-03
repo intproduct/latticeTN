@@ -50,6 +50,8 @@ from latticetn.sector_observables import (  # noqa: E402
     total_ndown,
     hubbard_sector_leakage_report,
 )
+from latticetn.model_spec import ModelSpec  # noqa: E402
+from latticetn.runner import run_latticetn_job, namespace_from_legacy_ad_args  # noqa: E402
 
 
 BETHE_HEISENBERG_E_INF = 0.25 - math.log(2.0)
@@ -391,115 +393,106 @@ def cuda_memory(device: str) -> dict:
 def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
     if not args.no_ed:
         raise ValueError("AD benchmark runner requires --no-ed")
-    dtype = parse_dtype(args.dtype)
-    device = resolve_device(args.device)
-    if device.startswith("cuda"):
-        tc.cuda.reset_peak_memory_stats(tc.device(device))
-    tc.manual_seed(args.seed)
+    if args.model_spec_json is not None:
+        model_data = json.loads(args.model_spec_json.read_text(encoding="utf-8"))
+        model, method, runtime, obs = namespace_from_legacy_ad_args(args)
+        model = ModelSpec.from_dict(model_data)
+        unified = run_latticetn_job(model, method, runtime, obs)
+        legacy = _legacy_result_from_unified(unified)
+        print("latticeTN AD model benchmark")
+        print(f"model={legacy['model']} N={legacy['N']} chi={legacy['chi']} sweeps={legacy['sweeps']}")
+        print("ED status = skipped by design")
+        print("classical DMRG/Lanczos = not used")
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
+        return legacy
 
-    mpo = build_mpo(args, dtype, device)
-    charge_aware = None
-    if args.sector_mode == "hard":
-        charge_aware, init = make_hard_charge_mps(args, dtype, device)
-        mps = charge_aware.mps
-    else:
-        mps, init = make_mps(args, dtype, device)
-    initial_energy = tensor_to_float(current_energy(mps, mpo))
-    initial_sector = sector_report(args, mps)
-    legacy_penalty_requested = (
-        (args.model == "spinless_tv" and args.lambda_n != 0.0)
-        or (args.model == "hubbard" and (args.lambda_nup != 0.0 or args.lambda_ndown != 0.0))
-    )
-    use_penalty_path = args.sector_mode == "soft" or legacy_penalty_requested
+    model_schema, method_schema, runtime_schema, obs_schema = namespace_from_legacy_ad_args(args)
+    unified = run_latticetn_job(model_schema, method_schema, runtime_schema, obs_schema)
+    legacy = _legacy_result_from_unified(unified)
 
     print("latticeTN AD model benchmark")
-    print(f"model={args.model} N={args.N} chi={args.chi} sweeps={args.sweeps}")
-    print(f"device={device} dtype={args.dtype} optimizer={args.optimizer} init={init}")
-    print(f"sector mode = {args.sector_mode}")
-    if device.startswith("cuda"):
-        print(f"GPU: {tc.cuda.get_device_name(tc.device(device))}")
+    print(f"model={legacy['model']} N={legacy['N']} chi={legacy['chi']} sweeps={legacy['sweeps']}")
+    print(
+        f"device={legacy['device']} dtype={legacy['dtype']} "
+        f"optimizer={legacy['optimizer']} init=stage10_schema"
+    )
+    print(f"sector mode = {legacy['sector_mode']}")
     print("ED status = skipped by design")
     print("classical DMRG/Lanczos = not used")
-    print(f"initial energy = {initial_energy:.12f}")
-    if initial_sector is not None:
-        print(f"initial sector report = {initial_sector}")
-
-    t0 = time.perf_counter()
-    if args.sector_mode == "hard":
-        history, max_grad, max_forbidden_grad = run_hard_sector_ad(args, charge_aware, mpo)
-        optimizer_path = "global_ad_hard_charge_mask"
-    elif use_penalty_path:
-        history, max_grad = run_global_penalty_ad(args, mps, mpo)
-        max_forbidden_grad = None
-        optimizer_path = "global_ad_with_sector_penalty"
-    else:
-        history, max_grad = run_two_site_ad(args, mps, mpo)
-        max_forbidden_grad = None
-        optimizer_path = "two_site_ad"
-    runtime = time.perf_counter() - t0
-
-    final_energy = history[-1]["energy"] if history else initial_energy
-    final_sector = sector_report(args, mps)
-    for rec in history:
+    for rec in legacy["history"]:
         print(
             f"sweep={rec['sweep']} E={rec['energy']:.12f} "
-            f"E/site={rec['energy_per_site']:.12f} max_bond={rec['max_bond']} "
-            f"max_grad={rec['max_grad_norm']:.3e}"
+            f"E/site={rec['energy_per_site']:.12f} max_bond={rec.get('max_bond')} "
+            f"max_grad={rec.get('gradient_norm', rec.get('max_grad_norm', 0.0)):.3e}"
         )
         if rec.get("sector_report") is not None:
             print(f"  sector report = {rec['sector_report']}")
-        if args.sector_mode == "hard":
+        if legacy["sector_mode"] == "hard":
             print(
-                f"  hard sector: max_forbidden_abs={rec['max_forbidden_abs']:.3e} "
-                f"max_forbidden_grad_abs={rec['max_forbidden_grad_abs']:.3e}"
+                f"  hard sector: max_forbidden_abs={rec.get('max_forbidden_abs', 0.0):.3e} "
+                f"max_forbidden_grad_abs={rec.get('max_forbidden_grad_abs', 0.0):.3e}"
             )
-    print(f"final energy = {final_energy:.12f}")
-    print(f"final E/site = {final_energy / args.N:.12f}")
-    print(f"final max bond = {max_bond(mps)}")
-    print(f"final max grad norm = {max_grad:.6e}")
-    print(f"runtime = {runtime:.3f} s")
+    print(f"final energy = {legacy['final_energy']:.12f}")
+    print(f"final E/site = {legacy['final_energy_per_site']:.12f}")
+    print(f"final max bond = {legacy['final_max_bond']}")
+    print(f"final max grad norm = {legacy['final_max_grad_norm']:.6e}")
+    print(f"runtime = {legacy['runtime']:.3f} s")
     print("ED status = skipped by design")
     print("classical DMRG/Lanczos = not used")
-
-    result = {
-        "model": args.model,
-        "N": args.N,
-        "chi": args.chi,
-        "sweeps": args.sweeps,
-        "device": device,
-        "dtype": args.dtype,
-        "optimizer": args.optimizer,
-        "optimizer_path": optimizer_path,
-        "sector_mode": args.sector_mode,
-        "init": init,
-        "initial_energy": initial_energy,
-        "initial_energy_per_site": initial_energy / args.N,
-        "initial_sector_report": initial_sector,
-        "history": history,
-        "final_energy": final_energy,
-        "final_energy_per_site": final_energy / args.N,
-        "final_sector_report": final_sector,
-        "final_max_bond": max_bond(mps),
-        "final_max_grad_norm": max_grad,
-        "final_max_forbidden_abs": (
-            max_forbidden_abs(mps, charge_aware.masks) if charge_aware is not None else None
-        ),
-        "final_max_forbidden_grad_abs": max_forbidden_grad,
-        "hard_sector_split_strategy": (
-            charge_aware.split_strategy if charge_aware is not None else None
-        ),
-        "runtime": runtime,
-        "gpu_memory": cuda_memory(device),
-        "ed_status": "skipped by design",
-        "classical_dmrg_lanczos": "not used",
-        "dense_hamiltonian_built": False,
-        "dmrg_lanczos_used": False,
-        "heisenberg_bethe_e_inf": BETHE_HEISENBERG_E_INF if args.model == "heisenberg" else None,
-    }
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    return result
+        args.output.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
+    return legacy
+
+
+def _legacy_result_from_unified(unified: dict) -> dict:
+    summary = unified["summary"]
+    diagnostics = unified["diagnostics"]
+    model = unified["model"]
+    method = unified["method"]
+    runtime = unified["runtime"]
+    history = unified["sweep_history"]
+    final_sector = history[-1].get("sector_report") if history else None
+    if method["sector_mode"] == "hard":
+        optimizer_path = "global_ad_hard_charge_mask"
+    elif method["sector_mode"] == "soft":
+        optimizer_path = "global_ad_with_sector_penalty"
+    else:
+        optimizer_path = "stage10_run_latticetn_job"
+    return {
+        "model": model["name"],
+        "N": model["N"],
+        "chi": method["chi"],
+        "sweeps": method["sweeps"],
+        "device": runtime["resolved_device"],
+        "dtype": runtime["dtype"],
+        "optimizer": method["optimizer"],
+        "optimizer_path": optimizer_path,
+        "sector_mode": method["sector_mode"],
+        "init": "stage10_schema",
+        "initial_energy": history[0]["energy"] if history else summary["final_energy"],
+        "initial_energy_per_site": history[0]["energy_per_site"] if history else summary["final_energy_per_site"],
+        "initial_sector_report": history[0].get("sector_report") if history else None,
+        "history": history,
+        "final_energy": summary["final_energy"],
+        "final_energy_per_site": summary["final_energy_per_site"],
+        "final_sector_report": final_sector,
+        "final_max_bond": summary["final_max_bond"],
+        "final_max_grad_norm": summary.get("final_gradient_norm", 0.0),
+        "final_max_forbidden_abs": diagnostics.get("max_forbidden_abs"),
+        "final_max_forbidden_grad_abs": diagnostics.get("max_forbidden_grad_abs"),
+        "hard_sector_split_strategy": "dense_global_ad_masked" if method["sector_mode"] == "hard" else None,
+        "runtime": summary["runtime"],
+        "gpu_memory": {},
+        "ed_status": "skipped by design",
+        "classical_dmrg_lanczos": "not used",
+        "dense_hamiltonian_built": diagnostics["dense_hamiltonian_built"],
+        "dmrg_lanczos_used": False,
+        "heisenberg_bethe_e_inf": BETHE_HEISENBERG_E_INF if model["name"] == "heisenberg" else None,
+        "stage10_result": unified,
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -519,6 +512,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--grad-clip", type=float, default=None)
     p.add_argument("--sector-mode", choices=["none", "soft", "hard"], default="none")
     p.add_argument("--output", type=Path, default=None)
+    p.add_argument("--model-spec-json", type=Path, default=None)
     p.add_argument("--no-ed", action="store_true")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--J", type=float, default=1.0)

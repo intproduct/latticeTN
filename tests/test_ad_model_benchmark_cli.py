@@ -61,6 +61,30 @@ def test_cpu_cli_heisenberg_spinless_and_hubbard_smokes(tmp_path):
     assert hubbard["initial_sector_report"]["n_up_target"] == 2
 
 
+def test_cli_accepts_model_spec_json(tmp_path):
+    model_json = tmp_path / "model_spec.json"
+    model_json.write_text(
+        json.dumps({
+            "name": "spinless_tv",
+            "N": 4,
+            "boundary": "obc",
+            "parameters": {"t": 1.0, "V": 0.0, "mu": 0.0},
+            "sector": {"mode": "hard", "target_n": 2},
+        }),
+        encoding="utf-8",
+    )
+    data = _run(
+        tmp_path,
+        "spinless_tv",
+        "--model-spec-json", str(model_json),
+        "--sector-mode", "hard",
+        "--target-n", "2",
+        "--init", "spinless_cdw",
+    )
+    assert data["stage10_result"]["model"]["name"] == "spinless_tv"
+    assert data["final_sector_report"]["abs_error"] < 1e-10
+
+
 def test_runner_source_does_not_import_ed_dmrg_or_lanczos():
     tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
     forbidden = {"dmrg", "lanczos"}
