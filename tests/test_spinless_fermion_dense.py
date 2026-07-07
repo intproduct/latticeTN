@@ -7,7 +7,8 @@ for the open-boundary 1D spinless fermion t-V chain. It must be:
 - The correct free-fermion (V=0, mu=0) spectrum (single-particle
   ``-2t cos(k pi/(N+1))`` summed over negative modes).
 - Particle-hole symmetric at half filling when mu=0.
-- Consistent with the explicit JW global operators (NOT a hard-core-boson H).
+- Consistent with explicit JW global operators: nearest-neighbor hopping uses
+  the JW-reduced adjacent product after the left strings cancel.
 """
 
 from __future__ import annotations
@@ -55,27 +56,18 @@ def test_free_fermion_t_scaling():
 def test_dense_matches_explicit_jw_global_operators():
     """The dense H must equal the explicit JW global-operator build.
 
-    Confirms the dense reference is genuinely fermionic: each hopping term is
-    ``-t (F^i x c^d x c + F^i x c x c^d)`` with the JW parity string, NOT the
-    hard-core-boson ``c^d x c`` (which would give the wrong sign structure).
+    Confirms the dense reference follows the JW algebra. The global single
+    operators carry strings, but in adjacent products those left strings cancel:
+    ``cdag_i c_{i+1}`` reduces to ``I... x cdag x c x I...``.
     """
     ops = fermion_operators(dtype=DTYPE)
     I, c, cdag, F, nmh = ops["I"], ops["c"], ops["cdag"], ops["F"], ops["n_minus_half"]
 
-    def global_op(local, site, N):
-        term = None
-        for k in range(N):
-            g = F if k < site else (local if k == site else I)
-            term = g if term is None else _kron(term, g)
-        return term
-
     def two_site(op_i, i, op_i1, N):
-        # F^i x op_i x op_{i+1} x I... (parity on sites 0..i-1)
+        # Adjacent JW product after cancellation: no left F-string remains.
         term = None
         for k in range(N):
-            if k < i:
-                g = F
-            elif k == i:
+            if k == i:
                 g = op_i
             elif k == i + 1:
                 g = op_i1
@@ -117,19 +109,12 @@ def test_particle_hole_symmetry_half_filling_mu_zero():
         assert abs(float(H.trace().real)) < 1e-10, (N, float(H.trace()))
 
 
-def test_not_hardcore_boson_signs():
-    """The fermionic H differs from the naive hard-core-boson H for N>=3.
-
-    For N=2 the JW string is trivial (only bond 0, no sites to the left), so
-    fermion == boson. For N>=3 bond i>=1 carries the JW parity string, so the
-    fermionic H differs from the hard-core-boson H (which would use c^d x c
-    with NO parity). This test confirms the difference is real.
-    """
+def test_nearest_neighbor_jw_strings_cancel_but_global_operators_anticommute():
+    """Adjacent hopping has no left string, while single fermion ops keep CAR."""
     ops = fermion_operators(dtype=DTYPE)
-    I, c, cdag = ops["I"], ops["c"], ops["cdag"]
+    I, c, cdag, F = ops["I"], ops["c"], ops["cdag"], ops["F"]
 
-    def hardcore_boson_H(N, t):
-        # naive two-site product with NO JW string (wrong for fermions)
+    def adjacent_hop_H(N, t):
         H = tc.zeros((2 ** N, 2 ** N), dtype=DTYPE)
         for i in range(N - 1):
             term = None
@@ -145,10 +130,17 @@ def test_not_hardcore_boson_signs():
             H = H + (-t) * (term + hc)
         return H
 
+    def global_op(local, site, N):
+        term = None
+        for k in range(N):
+            g = F if k < site else (local if k == site else I)
+            term = g if term is None else _kron(term, g)
+        return term
+
     for N in [2, 3, 4, 5]:
         Hf = spinless_fermion_dense(N, t=1.0, V=0.0, mu=0.0, dtype=DTYPE)
-        Hb = hardcore_boson_H(N, 1.0)
-        if N == 2:
-            assert tc.allclose(Hf, Hb, atol=1e-12), N
-        else:
-            assert not tc.allclose(Hf, Hb, atol=1e-9), N
+        assert tc.allclose(Hf, adjacent_hop_H(N, 1.0), atol=1e-12), N
+        if N >= 2:
+            ci = global_op(c, 0, N)
+            cjdag = global_op(cdag, 1, N)
+            assert tc.allclose(ci @ cjdag + cjdag @ ci, tc.zeros_like(Hf), atol=1e-12)

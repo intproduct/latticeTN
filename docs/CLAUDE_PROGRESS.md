@@ -349,3 +349,1361 @@ Current failing test or bottleneck:
 
 Next action:
 Report Stage 10 completion status.
+
+## Checkpoint Stage 11A-1: Hamiltonian and JW Sign Audit
+
+Goal:
+Start Stage 11 with strict small-N Hamiltonian/MPO convention audits using
+independent dense references for Heisenberg, TFI, spinless t-V, Hubbard, and
+ModelSpec -> build_mpo.
+
+Files changed:
+- Added `docs/PHYSICS_CONVENTIONS.md`.
+- Added `tests/physics/test_stage11_hamiltonian_audit.py`.
+- Updated `latticetn/operators.py` and `latticetn/mpo.py` to fix the spinless
+  nearest-neighbor JW convention: adjacent hopping products cancel the left JW
+  strings and must not depend on occupations to the left of the bond.
+- Updated spinless/model-builder tests to encode the corrected convention.
+- Updated `scripts/validation_score.py` to include the Stage 11A audit.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_hamiltonian_audit.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage11a`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_spinless_fermion_dense.py tests/test_spinless_fermion_mpo_dense.py tests/test_model_builder_mpo_dense.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage11_spinless`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_model_builder_fermion.py tests/test_spinless_fermion_native_energy.py tests/test_spinless_fermion_ad_solvers.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage11_spinless2`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q --basetemp D:\AI\latticeTN\.tmp_pytest_full_stage11a`
+
+Result:
+- Stage 11A audit: 5 passed.
+- Spinless dense/MPO/model-builder slice: 18 passed.
+- Spinless model-builder/native/AD solver slice: 16 passed.
+- Updated fast validation: 41 passed, Score PASS.
+- Full pytest suite: passed with expected skips and existing cache/report-path
+  warnings.
+- The new independent audit exposed the previous spinless convention error:
+  the old dense/MPO implementation inserted `F_0 ... F_{i-1}` into adjacent
+  hopping. This caused unphysical left-occupation-dependent signs. The fix uses
+  the JW-reduced adjacent product for the Hamiltonian while preserving explicit
+  JW strings for global single-fermion operators/nonlocal observables.
+
+Current failing test or bottleneck:
+- None for Stage 11A strict Hamiltonian/JW audit. Broader Stage 11B-D benchmark,
+  observable, correlation, entanglement, and report-generation work remains.
+
+Next action:
+Continue with Stage 11B small-N energy benchmarks and AD/classical DMRG
+cross-checks, keeping ED restricted to small systems.
+
+## Checkpoint Stage 11B-1: Small-N Exact Energy References and Variational Bounds
+
+Goal:
+Add a reusable Stage 11 exact-reference helper for small-N energy benchmarks,
+including fixed-sector ED for spinless t-V and Hubbard, then verify short CPU
+AD/classical-DMRG runs respect variational bounds against those references.
+
+Files changed:
+- Added `latticetn/benchmarks/__init__.py`.
+- Added `latticetn/benchmarks/exact_reference.py`.
+- Added `tests/physics/test_stage11_small_n_energy_benchmarks.py`.
+- Updated `scripts/validation_score.py` to include the Stage 11B small-N energy
+  benchmark tests in the fast gate.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_small_n_energy_benchmarks.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage11b`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Baseline fast validation before Stage 11B: 41 passed, Score PASS.
+- Stage 11B small-N benchmark tests: 4 passed.
+- Updated fast validation with Stage 11A + 11B: 45 passed, Score PASS.
+- `exact_reference.py` builds dense references only for small-N validation and
+  supports sector restrictions:
+  - spinless fixed `target_n` sectors;
+  - Hubbard fixed `(target_nup, target_ndown)` sectors.
+- Short CPU AD jobs for Heisenberg, TFI, spinless hard sector, and Hubbard hard
+  sector satisfy `E_variational >= E_exact - 1e-8`.
+- Heisenberg classical DMRG Stage 10 runner path satisfies the same variational
+  bound against ED and explicitly reports `ed_used=false`,
+  `classical_dmrg_used=true`, and `lanczos_used=true`.
+
+Current failing test or bottleneck:
+- None for the Stage 11B small-N exact/variational-bound slice. Broader Stage
+  11B-D coverage remains incomplete: full AD-vs-DMRG multi-model benchmarks,
+  observable/correlation/entanglement exact audits, automated benchmark suite,
+  literature trend reports, and final Physics Validation Report generation.
+
+Next action:
+Continue with Stage 11C observable/correlation/entanglement exact audits or
+Stage 11D benchmark-suite/report generation, keeping large-N runs ED-free.
+
+## Checkpoint Stage 11C-1: Product-State Observables, Connected Correlations, and Entanglement
+
+Goal:
+Add strict small-N observable/correlation/entanglement audits with analytic
+product-state values and known entangled-state entropy. Verify the corrected
+spinless nearest-neighbor JW convention also holds in observable code.
+
+Files changed:
+- Updated `latticetn/observables.py`:
+  - added `dense_connected_correlation`;
+  - added `mps_connected_correlation`;
+  - corrected spinless nearest-neighbor hopping observable to use the
+    JW-reduced adjacent two-site product with no left parity string.
+- Added `tests/physics/test_stage11_observables_correlations.py`.
+- Updated `scripts/validation_score.py` to include the Stage 11C observable
+  audit in the fast gate.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_observables_correlations.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage11c`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/test_observables_dense_compare.py tests/test_native_observable_contractions.py tests/test_entanglement_entropy.py tests/test_hubbard_observables.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage11c_existing`
+
+Result:
+- Baseline fast validation before Stage 11C: 45 passed, Score PASS.
+- Stage 11C observable/correlation tests: 5 passed.
+- Updated fast validation with Stage 11A-C: 50 passed, Score PASS.
+- Existing observable/entanglement/Hubbard observable tests: 18 passed.
+- Analytic product-state checks now cover:
+  - spin local `<Sz_i>` and connected `<Sz_i Sz_j> - <Sz_i><Sz_j>`;
+  - spinless local density, density-density, connected density correlation;
+  - spinless NN hopping on a state with an occupied site left of the bond,
+    proving the observable has no obsolete left parity string;
+  - Hubbard local `n_up`, `n_down`, `Sz`, and double occupancy;
+  - product-state entanglement `S=0` and Bell entropy `S=ln(2)`.
+
+Current failing test or bottleneck:
+- None for the Stage 11C small-N observable/correlation/entanglement audit
+  slice. Remaining Stage 11 work includes automated benchmark-suite/report
+  generation and literature/thermodynamic trend metadata.
+
+Next action:
+Implement Stage 11D benchmark-suite output scaffolding and Physics Validation
+Report generation for quick/exact/observables suites, without large-N ED.
+
+## Checkpoint Stage 11D-1: Quick Benchmark Suite and Physics Validation Report
+
+Goal:
+Add the Stage 11 benchmark-suite harness and report-generation scaffold. The
+quick suite must generate JSON/CSV/Markdown summaries and a Physics Validation
+Report without large-N ED, GPU jobs, TDVP, finite-temperature, or frontend work.
+
+Files changed:
+- Added `benchmarks/references/reference_registry.json`.
+- Added `scripts/run_physics_benchmark_suite.py`.
+- Added `tests/physics/test_stage11_benchmark_suite_runner.py`.
+- Updated `scripts/validation_score.py` to include the Stage 11D runner test.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py --basetemp D:\AI\latticeTN\.tmp_pytest_stage11d`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Baseline fast validation before Stage 11D: 50 passed, Score PASS.
+- Stage 11D runner tests: 2 passed.
+- Default quick benchmark suite generated:
+  - `outputs/physics_benchmarks/benchmark_summary.json`
+  - `outputs/physics_benchmarks/benchmark_summary.csv`
+  - `outputs/physics_benchmarks/benchmark_summary.md`
+  - `outputs/physics_benchmarks/PHYSICS_VALIDATION_REPORT.md`
+- Quick suite result: 15/15 PASS.
+- Updated fast validation with Stage 11A-D runner test: 52 passed, Score PASS.
+- The reference registry now records Heisenberg Bethe thermodynamic-limit
+  metadata plus spinless and Hubbard free-fermion analytic limits. These are
+  trend/metadata references, not strict finite-OBC equality targets.
+
+Current failing test or bottleneck:
+- None for the Stage 11D quick benchmark-suite/report scaffold. The quick
+  report is not yet a full large-N literature reproduction; future work remains
+  for fuller trend benchmarks and model-by-model large-N AD runs that avoid ED,
+  classical DMRG, Lanczos, and dense Hamiltonian construction.
+
+Next action:
+Expand Stage 11D trend coverage and/or integrate the generated Physics
+Validation Report into final documentation once broader benchmark coverage is
+complete.
+
+## Checkpoint Stage 11D-2: Small-N Literature and Trend Checks
+
+Goal:
+Strengthen the Stage 11D literature suite beyond metadata-only records by
+adding computed small-N trend checks that are scientifically meaningful but do
+not invoke large-N ED or long training jobs.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - Heisenberg finite-OBC `E/N` trend toward the Bethe thermodynamic limit from
+    small ED at `N=4,6,8`;
+  - TFI transverse magnetization trend across `h=0.5,1.0,1.5`;
+  - spinless `V=0` open-chain free-fermion analytic energy check at half
+    filling;
+  - Hubbard small-N double-occupancy decrease with increasing `U`.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  trend records are present.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Baseline fast validation before trend expansion: 52 passed, Score PASS.
+- Stage 11D runner test: 2 passed.
+- Quick benchmark suite: 19/19 PASS.
+- Updated fast validation: 52 passed, Score PASS.
+- Trend checks are deliberately small-system:
+  - Heisenberg ED uses `N=4,6,8` only and treats Bethe as a trend reference, not
+    a strict finite-OBC target.
+  - TFI, spinless, and Hubbard trend checks use small dense systems only.
+  - No large-N dense Hamiltonian, GPU job, TDVP, finite-temperature, or cylinder
+    algorithm was introduced.
+
+Current failing test or bottleneck:
+- None for the Stage 11D small-N literature/trend suite. Remaining work for the
+  full Stage 11 target includes larger ED-free AD benchmark runs and fuller
+  model-specific report tables if a stricter acceptance bar is required.
+
+Next action:
+Audit remaining Stage 11 acceptance items and either add missing ED-free
+benchmark/report coverage or summarize residual REVIEW REQUIRED cases.
+
+## Checkpoint Stage 11 Hygiene-1: Fermion Convention Prose Cleanup
+
+Goal:
+Remove stale spinless-fermion Jordan-Wigner wording that still described a
+left parity-carrying nearest-neighbor hopping path after the Stage 11A/C
+correction changed the executable convention to the reduced adjacent product.
+
+Files changed:
+- Cleaned `latticetn/mpo.py` spinless t-V MPO docstring to document the D=5
+  reduced nearest-neighbor automaton with no left JW parity-carry state.
+- Cleaned `latticetn/observables.py` spinless hopping comments/docstrings to
+  distinguish nearest-neighbor reduced hopping from nonlocal Green functions
+  that would require explicit JW strings.
+- Normalized newly touched fermion doc prose to ASCII/no-BOM text.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m py_compile latticetn\mpo.py latticetn\observables.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_hamiltonian_audit.py tests/physics/test_stage11_observables_correlations.py tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Syntax check passed.
+- Focused Stage 11 tests: 12 passed.
+- Fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- None for this convention-prose cleanup. Pytest still reports a cache write
+  warning for `.pytest_cache` on this Windows workspace, but test execution and
+  validation score pass.
+
+Next action:
+Continue the Stage 11 acceptance audit: identify remaining gaps such as
+larger ED-free AD benchmark coverage, fuller model-specific report tables, and
+full pytest after the latest Stage 11D additions.
+
+## Checkpoint Stage 11D-3: Small Full-Stack AD/DMRG/ED Benchmark Records
+
+Goal:
+Strengthen the Stage 11 benchmark report so it includes explicit full-stack
+ground-state evidence, not only Hamiltonian/ED/trend records.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added a small CPU `fullstack` suite for Heisenberg `N=4`, `chi=4`;
+  - records AD-MPS Rayleigh optimization vs ED;
+  - records classical two-site DMRG reference vs ED;
+  - records AD-MPS vs classical DMRG on the same MPO, boundary convention,
+    dtype, and bond dimension;
+  - includes the full-stack records in `--suite quick` and `--suite full`;
+  - adds a Sector audit section to the generated Physics Validation Report.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  full-stack records and Sector audit section are generated.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 22/22 PASS.
+- Full-stack records:
+  - AD vs ED: `E_AD=-1.6159638811727501`, `E_ED=-1.616025403784439`,
+    `abs_error=6.15e-05`, PASS.
+  - DMRG vs ED: `E_DMRG=-1.616025403784439`, `abs_error=0.0`, PASS.
+  - AD vs DMRG: `abs_difference=6.15e-05`, PASS.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- None for the small full-stack Stage 11 benchmark records. The new full-stack
+  case remains small and CPU-only. Dense ED and classical DMRG are used only as
+  reference/baseline records, not inside the AD loss path.
+
+Next action:
+Continue the Stage 11 acceptance audit. Remaining likely gaps include fuller
+model-specific report tables, explicit CUDA clean-skip evidence, larger
+ED-free AD benchmark policy checks, and a full pytest run after the latest
+Stage 11D additions.
+
+## Checkpoint Stage 11 Audit-1: Requirement-to-Evidence Gap Map
+
+Goal:
+Create a current-state acceptance audit that distinguishes proven Stage 11
+coverage from remaining work, so the goal is not accidentally narrowed to the
+already-green quick suite.
+
+Files changed:
+- Added `docs/STAGE11_ACCEPTANCE_AUDIT.md`.
+- The audit records current evidence for fast validation, quick benchmark
+  outputs, generated reports, main-branch development, strict Hamiltonian
+  checks, observables/correlations/entanglement, literature trend checks, and
+  the new Heisenberg full-stack AD/DMRG/ED records.
+- The audit explicitly marks remaining gaps: broader model-specific AD/DMRG
+  tables, larger ED-free AD benchmark coverage, CUDA clean-skip evidence, full
+  pytest after the latest additions, and a final requirement-by-requirement
+  Stage 11 report.
+
+Commands run:
+- `rg -n "52 passed|22/22 PASS|Remaining Gaps|Stage 11 is materially stronger|fullstack_heisenberg_ad_vs_ed_N4" docs\STAGE11_ACCEPTANCE_AUDIT.md`
+- `Get-Content -LiteralPath docs\STAGE11_ACCEPTANCE_AUDIT.md | Select-Object -First 120`
+
+Result:
+- The audit file is present and contains the current evidence summary plus
+  explicit remaining gaps. This is not a completion claim; it is a stronger
+  roadmap for finishing Stage 11 honestly.
+
+Current failing test or bottleneck:
+- No new code was changed for this audit checkpoint. The remaining bottleneck
+  is breadth of Stage 11 proof, especially beyond Heisenberg small-N.
+
+Next action:
+Use `docs/STAGE11_ACCEPTANCE_AUDIT.md` to drive the next Stage 11 increment,
+likely either adding model-specific full-stack records or adding explicit CUDA
+clean-skip/policy records to the generated physics report.
+
+## Checkpoint Stage 11D-4: TFI and Spinless Full-Stack Benchmark Breadth
+
+Goal:
+Reduce the Stage 11 model-breadth gap by extending the small full-stack
+AD/DMRG/ED benchmark records beyond Heisenberg.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - factored the full-stack record generation into a small generic helper;
+  - kept all cases CPU-small and dense-ED-only at small N;
+  - added TFI `N=4`, `chi=4` AD-vs-ED, DMRG-vs-ED, and AD-vs-DMRG records;
+  - added spinless t-V `N=4`, `chi=4` AD-vs-ED, DMRG-vs-ED, and AD-vs-DMRG
+    records.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  new full-stack records are present.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` to narrow the model-breadth gap:
+  full-stack records now cover Heisenberg, TFI, and spinless t-V; Hubbard
+  full-stack AD remains open.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 28/28 PASS.
+- Full-stack records now include 9/9 PASS:
+  - Heisenberg AD vs ED: abs error `6.15e-05`.
+  - Heisenberg DMRG vs ED: abs error `0.0`.
+  - Heisenberg AD vs DMRG: abs diff `6.15e-05`.
+  - TFI AD vs ED: abs error `1.96e-04`.
+  - TFI DMRG vs ED: abs error `0.0`.
+  - TFI AD vs DMRG: abs diff `1.96e-04`.
+  - spinless t-V AD vs ED: abs error `1.80e-05`.
+  - spinless t-V DMRG vs ED: abs error `1.33e-15`.
+  - spinless t-V AD vs DMRG: abs diff `1.80e-05`.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- None for Heisenberg/TFI/spinless small full-stack records. Hubbard remains
+  the model-specific full-stack gap: the current quick suite still validates
+  Hubbard Hamiltonian, small ED, observables, and interaction trend, but does
+  not yet contain a passing small Hubbard AD-vs-ED benchmark record.
+
+Next action:
+Either investigate a cheap Hubbard full-stack AD setting, or add explicit CUDA
+clean-skip / large-N ED-free policy records to the Stage 11 report before the
+full pytest and final acceptance-report pass.
+
+## Checkpoint Stage 11D-5: CUDA and Large-N Policy Records
+
+Goal:
+Make Stage 11 quick-suite policy behavior explicit in generated benchmark
+artifacts, especially CPU-only CUDA behavior and the large-N AD no-reference
+policy.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added a `policy` suite;
+  - added `policy_cuda_quick_suite_cpu_only`;
+  - added `policy_large_n_ad_runner_no_dense_or_classical_reference`;
+  - includes policy records in `--suite quick` and `--suite full`;
+  - adds a Policy audit section to `PHYSICS_VALIDATION_REPORT.md`.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  policy records and Policy audit section are generated.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` to record CUDA quick-suite and
+  large-N policy evidence.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 30/30 PASS.
+- Policy records:
+  - `policy_cuda_quick_suite_cpu_only`: PASS. On this machine CUDA is
+    available, but Stage 11 quick validation remains CPU-only and does not run
+    GPU jobs.
+  - `policy_large_n_ad_runner_no_dense_or_classical_reference`: PASS as a
+    generated policy record stating large-N AD benchmark records must not call
+    ED, classical DMRG, Lanczos, or dense Hamiltonian construction.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- None for policy/report generation. Remaining Stage 11 gaps are now narrower:
+  Hubbard full-stack AD/DMRG/ED breadth, larger AD-only benchmark evidence, a
+  full pytest pass after latest additions, and a final requirement-by-
+  requirement acceptance report.
+
+Next action:
+Investigate a cheap Hubbard full-stack AD configuration or proceed to a full
+pytest/final-audit pass if the remaining Hubbard gap is documented as REVIEW
+REQUIRED.
+
+## Checkpoint Stage 11D-6: Hubbard Hard-Sector Full-Stack Benchmark
+
+Goal:
+Close the remaining small model-breadth gap by adding a Hubbard full-stack
+AD/DMRG/ED benchmark record that respects Hubbard sector physics.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added hard-sector Hubbard `N=2`, `(N_up,N_down)=(1,1)` AD-vs-sector-ED
+    through the existing Stage 10 `run_latticetn_job` API;
+  - added Hubbard DMRG-vs-ED and Hubbard AD-vs-DMRG records;
+  - records AD runner diagnostics proving the AD path did not use ED,
+    classical DMRG, Lanczos, or dense Hamiltonian construction.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  Hubbard full-stack records are present.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md`: full-stack small-N coverage now
+  includes Heisenberg, TFI, spinless t-V, and hard-sector Hubbard.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 33/33 PASS.
+- Hubbard full-stack records:
+  - hard-sector AD vs sector ED: `E_AD=-2.236067977491639`,
+    `E_ED=-2.236067977499789`, abs error `8.15e-12`, sector errors zero.
+  - DMRG vs ED: abs error `8.88e-16`.
+  - AD vs DMRG: abs diff `8.15e-12`.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- None for small model-breadth full-stack coverage. Remaining gaps are larger
+  ED-free AD benchmark evidence, a full pytest pass after latest additions,
+  and a final requirement-by-requirement Stage 11 acceptance report.
+
+Next action:
+Run full pytest if affordable on CPU, then update the final acceptance audit
+with full-suite evidence or any failures.
+
+## Checkpoint Stage 11 Full Pytest-1: Workspace Temp Full-Suite Pass
+
+Goal:
+Verify the full repository pytest suite after the latest Stage 11 full-stack
+and policy additions.
+
+Files changed:
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` to record full pytest evidence.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q --basetemp D:\AI\latticeTN\.tmp_pytest_full_stage11_latest`
+
+Result:
+- Full pytest with the default temp root failed during test setup because
+  pytest could not scan/create under
+  `C:\Users\Frank F\AppData\Local\Temp\pytest-of-Frank F` (`PermissionError:
+  [WinError 5]`).
+- Full pytest with workspace-local `--basetemp` exited 0.
+- The passing full run still reports the known report-path scalar-read warning
+  in `latticetn/ad_variational.py` and the `.pytest_cache` write warning, but
+  no test failures.
+
+Current failing test or bottleneck:
+- No full-suite test failure remains when pytest uses a writable temp root.
+  The default Windows temp root remains an environment permission issue.
+
+Next action:
+Add a small large-N ED-free AD-only benchmark/policy smoke record if it can be
+kept CPU-cheap, then prepare the final requirement-by-requirement Stage 11
+acceptance report.
+
+## Checkpoint Stage 11D-7: Large-N AD Smoke and Final Report Draft
+
+Goal:
+Add concrete ED-free large-N AD evidence and create a requirement-oriented
+Stage 11 report without overstating unfinished large-N convergence breadth.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added `large_n_ad` suite;
+  - added `large_n_ad_heisenberg_N20_chi8_no_reference`, a CPU-only
+    Heisenberg `N=20`, `chi=8`, 3-step AD smoke record;
+  - reports no ED, no classical DMRG, no Lanczos, and no dense Hamiltonian
+    construction for the large-N record;
+  - adds a Large-N AD audit section to the generated report.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  large-N AD record and report section are generated.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Added `docs/STAGE11_FINAL_REPORT.md`, with current PASS evidence and
+  explicit REVIEW REQUIRED large-N convergence items.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` to record the 34/34 quick suite,
+  full pytest with workspace `--basetemp`, the N=20 AD smoke, and the final
+  report artifact.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+- `rg -n "34/34|REVIEW REQUIRED|large_n_ad_heisenberg|Full large-N convergence|STAGE11_FINAL_REPORT|full pytest" docs\STAGE11_ACCEPTANCE_AUDIT.md docs\STAGE11_FINAL_REPORT.md`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 34/34 PASS.
+- N=20 AD-only smoke:
+  - energy history: `[-0.3307489912, -0.5441324881, -2.2180746826,
+    -3.8076497833]`;
+  - max bond: 8;
+  - no ED/classical DMRG/Lanczos/dense Hamiltonian construction.
+- Updated fast validation: 52 passed, Score PASS.
+- `docs/STAGE11_FINAL_REPORT.md` is present and marks large-N convergence
+  breadth as REVIEW REQUIRED rather than claiming full completion.
+
+Current failing test or bottleneck:
+- No current automated quick/full pytest failure remains with the writable
+  workspace temp root. The remaining Stage 11 scientific gap is full large-N
+  chi-convergence and observable/correlation trend breadth across the requested
+  model families.
+
+Next action:
+Decide whether to run additional large-N CPU benchmarks under explicit user
+approval/resource limits, or keep Stage 11 in REVIEW REQUIRED with the current
+small/medium CPU evidence and final report.
+
+## Checkpoint Stage 11D-8: Cross-Model Large-N AD Smoke Records
+
+Goal:
+Broaden ED-free large-N AD evidence beyond the Heisenberg N=20 smoke while
+keeping the runs CPU-cheap and scientifically labeled as smoke, not full
+chi-convergence.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - extended `large_n_ad` suite with spinless t-V `N=20`, hard sector
+    `target_n=10`, `chi=8`;
+  - extended `large_n_ad` suite with Hubbard `N=10`, hard sector
+    `(target_nup,target_ndown)=(5,5)`, `chi=8`;
+  - records sector reports, forbidden-entry/gradient diagnostics, finite
+    energies, gradient norms, max bond, and no ED/classical DMRG/Lanczos/dense
+    Hamiltonian construction.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  new large-N AD records are present.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and `docs/STAGE11_FINAL_REPORT.md`
+  to reflect 36/36 quick PASS and cross-model large-N smoke coverage.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 36/36 PASS.
+- Large-N AD smoke records:
+  - Heisenberg `N=20`, `chi=8`: energy decreased from `-0.3307489912` to
+    `-3.8076497833`; no ED/DMRG/Lanczos/dense Hamiltonian.
+  - spinless t-V `N=20`, `chi=8`, `target_n=10`: final energy
+    `-2.3780704961`; sector abs error `5.33e-15`; variance `4.26e-14`;
+    no ED/DMRG/Lanczos/dense Hamiltonian.
+  - Hubbard `N=10`, `chi=8`, `(N_up,N_down)=(5,5)`: final energy
+    `-10.0031957821`; sector abs errors <= `8.88e-16`; total-number variance
+    `0.0`; no ED/DMRG/Lanczos/dense Hamiltonian.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No current quick/full-pytest failure remains with the writable workspace
+  temp root. The remaining Stage 11 gap is full large-N chi-convergence and
+  observable/correlation trend tables beyond smoke-level evidence.
+
+Next action:
+Either run explicit, resource-bounded large-N chi-convergence jobs under
+approval, or keep the final Stage 11 report in REVIEW REQUIRED for those
+larger benchmark tables.
+
+## Checkpoint Stage 11D-9: Large-N Observable Smoke Fields
+
+Goal:
+Add non-dense large-N observable/correlation smoke evidence to the Stage 11
+benchmark records without claiming literature-grade large-N trends.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added small non-dense MPS local/two-site/connected expectation helpers;
+  - Heisenberg large-N AD record now includes finite `local_Sz_mid` and
+    `connected_SzSz_midbond`;
+  - spinless and Hubbard large-N hard-sector AD records expose additive
+    sector observables as large-N non-dense observable smoke fields.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  new large-N observable fields are present and finite/sector-clean.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and `docs/STAGE11_FINAL_REPORT.md`
+  to distinguish large-N observable smoke from still-missing literature-grade
+  large-N trend tables.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 36/36 PASS.
+- Large-N observable smoke fields:
+  - Heisenberg `N=20`: `local_Sz_mid=0.0186037017`,
+    `connected_SzSz_midbond=-0.0255121421`.
+  - spinless t-V `N=20`: hard-sector additive observables preserve
+    `target_n=10` with abs error `5.33e-15` and variance `4.26e-14`.
+  - Hubbard `N=10`: hard-sector additive observables preserve
+    `(N_up,N_down)=(5,5)` with abs errors <= `8.88e-16`.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are full large-N chi-convergence
+  and literature-grade large-N observable/correlation trend tables beyond
+  smoke-level evidence.
+
+Next action:
+Only proceed to those stronger large-N tables with explicit resource bounds;
+otherwise keep Stage 11 marked REVIEW REQUIRED for that final breadth.
+
+## Checkpoint Stage 11D-10: Bounded Heisenberg Large-N Chi Table
+
+Goal:
+Strengthen the remaining large-N convergence evidence with a CPU-small,
+explicitly bounded chi table while preserving the REVIEW REQUIRED status for
+larger production-scale tables.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added a resource-bounded Heisenberg `N=20` chi table for `chi=4,8`;
+  - records finite energy histories, energy/site, gradient norms, max bond,
+    non-dense local/connected `Sz` observables, and explicit no-ED/no-DMRG/
+    no-Lanczos/no-dense-Hamiltonian flags;
+  - keeps the existing `chi=8` large-N smoke record for backwards-compatible
+    report evidence.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  new chi-table record, policy flags, finite observables, and max-bond bounds.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report the bounded chi table without
+  claiming full large-N completion.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 37/37 PASS.
+- Bounded Heisenberg `N=20` chi table:
+  - `chi=4`: final energy `-2.0594337898`, energy/site
+    `-0.1029716895`, finite `local_Sz_mid=0.0891780579`,
+    `connected_SzSz_midbond=-0.0323883644`.
+  - `chi=8`: final energy `-3.8076497833`, energy/site
+    `-0.1903824892`, finite `local_Sz_mid=0.0186037017`,
+    `connected_SzSz_midbond=-0.0255121421`.
+  - each chi energy decreased over the three-step CPU smoke budget;
+    chi=8 finished below chi=4; no ED/classical DMRG/Lanczos/dense
+    Hamiltonian construction was used.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are full Heisenberg N=40/80
+  chi-convergence, cross-model large-N chi tables, and literature-grade
+  large-N observable/correlation trends beyond bounded smoke evidence.
+
+Next action:
+Continue strengthening large-N evidence with resource-bounded cross-model chi
+tables, or keep Stage 11 marked REVIEW REQUIRED for the larger requested
+benchmark breadth if those runs exceed the allowed CPU-small envelope.
+
+## Checkpoint Stage 11D-11: Cross-Model Bounded Large-N Chi Tables
+
+Goal:
+Extend bounded large-N chi-table evidence beyond Heisenberg to the hard-sector
+spinless t-V and Hubbard records while avoiding unsupported monotonic
+convergence claims.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added spinless t-V `N=20` hard-sector chi=4/8 table;
+  - added Hubbard `N=10` hard-sector chi=4/8 table;
+  - each table records finite energies, energy/site, sector/additive
+    observables, gradient norm, max bond, diagnostics, and explicit no-ED/
+    no-DMRG/no-Lanczos/no-dense-Hamiltonian evidence;
+  - table pass criteria check finite energies, sector cleanliness, forbidden
+    entry/gradient cleanliness, and max bond <= chi, but intentionally do not
+    require monotonic energy improvement for the tiny CPU budget.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  cross-model chi-table records and policy/sector-clean fields.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report 39/39 quick PASS and bounded
+  chi=4/8 evidence for all three large-N model families.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 39/39 PASS.
+- Cross-model bounded chi tables:
+  - spinless t-V `N=20`, `target_n=10`:
+    - `chi=4`: final energy `-2.3785951159`, sector abs error
+      `3.55e-15`, variance `0.0`;
+    - `chi=8`: final energy `-2.3780704961`, sector abs error
+      `5.33e-15`, variance `4.26e-14`.
+  - Hubbard `N=10`, `(N_up,N_down)=(5,5)`:
+    - `chi=4`: final energy `-10.0017836658`, sector abs errors
+      `8.88e-16`;
+    - `chi=8`: final energy `-10.0031957821`, sector abs errors <=
+      `8.88e-16`.
+  - all rows are finite, max bond <= chi, forbidden entries/gradients are
+    clean, and no ED/classical DMRG/Lanczos/dense Hamiltonian construction was
+    used.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are the larger requested
+  production-scale large-N chi-convergence tables and literature-grade
+  large-N observable/correlation trend tables.
+
+Next action:
+If staying inside CPU-small limits, continue by improving large-N observable
+trend artifacts; otherwise the next true completion step needs explicit
+resource bounds for N=40/80 and Hubbard N=20/40 convergence runs.
+
+## Checkpoint Stage 11D-12: Spinless Large-N Analytic Observable Trend
+
+Goal:
+Add a genuine large-N observable/correlation trend artifact using an
+independent analytic reference that remains CPU-small and avoids dense
+many-body ED.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added open-chain spinless free-fermion sine-mode observable helper;
+  - added `trend_spinless_free_fermion_large_n_observables` literature record
+    for `N=40,80` at half filling;
+  - records analytic energy/site, mid-chain density, neighbor density, and
+    connected midbond density correlation;
+  - checks that `N=80` energy/site is closer to the thermodynamic `-2/pi`
+    value than `N=40`, that mid density stays near half filling, and that the
+    connected density correlation is finite/nonzero.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  new large-N analytic trend record and its trend fields.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report 40/40 quick PASS and distinguish
+  this V=0 analytic large-N evidence from the still-missing interacting
+  large-N trend tables.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 40/40 PASS.
+- Spinless open-chain free-fermion analytic large-N trend:
+  - `N=40`: energy/site `-0.6276949278`, distance to `-2/pi`
+    `0.0089248446`, mid density `0.5000000000`, connected midbond density
+    correlation `-0.1093087776`.
+  - `N=80`: energy/site `-0.6321179224`, distance to `-2/pi`
+    `0.0045018499`, mid density `0.5000000000`, connected midbond density
+    correlation `-0.1053050030`.
+  - no many-body ED or dense Hamiltonian construction was used for this
+    analytic reference.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are full interacting large-N
+  chi-convergence tables and literature-grade interacting large-N
+  observable/correlation trend tables.
+
+Next action:
+Continue with another independent CPU-small large-N trend if available, or
+move to explicit resource-bounded interacting N=40/80 and Hubbard N=20/40
+benchmark planning before claiming Stage 11 completion.
+
+## Checkpoint Stage 11D-13: Hubbard U=0 Large-N Analytic Observable Trend
+
+Goal:
+Add an independent large-N Hubbard observable/correlation trend at the
+noninteracting `U=0` limit without many-body ED or dense Hamiltonian
+construction.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added a spin-resolved open-chain Hubbard `U=0` sine-mode observable helper;
+  - added `trend_hubbard_free_fermion_large_n_observables` for `N=40,80`,
+    half filling with `(N_up,N_down)=(N/2,N/2)`;
+  - records analytic energy/site, mid density, double occupancy, neighbor
+    density/double occupancy, and connected midbond density correlation;
+  - checks that `N=80` energy/site is closer to the thermodynamic `-4/pi`
+    value than `N=40`, mid density remains near `1.0`, double occupancy
+    remains near `0.25`, and connected density correlation is finite/nonzero.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  new Hubbard large-N analytic record and its trend fields.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report 41/41 quick PASS and distinguish
+  Hubbard `U=0` analytic large-N evidence from still-missing interacting
+  large-N tables.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 41/41 PASS.
+- Hubbard `U=0` open-chain analytic large-N trend:
+  - `N=40`: energy/site `-1.2553898556`, distance to `-4/pi`
+    `0.0178496892`, mid density `1.0000000000`, double occupancy
+    `0.2500000000`, connected midbond density correlation `-0.2186175551`.
+  - `N=80`: energy/site `-1.2642358449`, distance to `-4/pi`
+    `0.0090036999`, mid density `1.0000000000`, double occupancy
+    `0.2500000000`, connected midbond density correlation `-0.2106100060`.
+  - no many-body ED or dense Hamiltonian construction was used for this
+    analytic reference.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are full interacting large-N
+  chi-convergence tables and literature-grade interacting large-N
+  observable/correlation trend tables.
+
+Next action:
+Continue only with CPU-small independent trend evidence or request explicit
+resource bounds before attempting the larger interacting N=40/80 and Hubbard
+N=20/40 convergence jobs required for final Stage 11 completion.
+
+## Checkpoint Stage 11D-14: Focused Large-N Evidence Audit Artifacts
+
+Goal:
+Make the current large-N evidence and remaining REVIEW REQUIRED gaps directly
+machine-readable and human-readable from the benchmark output directory.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added `outputs/physics_benchmarks/large_n_evidence.json`;
+  - added `outputs/physics_benchmarks/large_n_evidence.md`;
+  - the JSON/Markdown artifacts extract large-N AD smokes, bounded chi tables,
+    spinless `V=0` and Hubbard `U=0` analytic `N=40/80` trend records, and
+    explicit remaining interacting large-N review-required items.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to require
+  the new output files and assert their evidence/review-required contents.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to reference the focused large-N evidence
+  artifacts.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 41/41 PASS.
+- New focused large-N evidence files:
+  - `outputs/physics_benchmarks/large_n_evidence.json`;
+  - `outputs/physics_benchmarks/large_n_evidence.md`.
+- `large_n_evidence.json` reports status `REVIEW REQUIRED`, 8 current
+  evidence records, and 4 explicit remaining review-required items:
+  Heisenberg N=40/80 interacting AD chi-convergence, spinless t-V N=40/80
+  interacting AD chi-convergence, Hubbard N=20/40 interacting AD
+  chi-convergence, and interacting large-N observable/correlation literature
+  trends.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are full interacting large-N
+  chi-convergence tables and literature-grade interacting large-N
+  observable/correlation trend tables.
+
+Next action:
+Proceed only with further CPU-small independent evidence, or obtain explicit
+resource bounds before running the larger interacting benchmark jobs needed
+for final Stage 11 completion.
+
+## Checkpoint Stage 11D-15: Larger Interacting Large-N Smoke Records
+
+Goal:
+Move closer to the requested interacting large-N benchmark envelope with
+CPU-small larger-size smoke records while preserving the distinction from full
+chi-convergence.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added Heisenberg `N=40`, `chi=8`, three-step AD-only smoke;
+  - added spinless t-V `N=40`, hard-sector `target_n=20`, `chi=8` smoke;
+  - added Hubbard `N=20`, hard-sector `(N_up,N_down)=(10,10)`, `chi=8`
+    smoke;
+  - all new records keep explicit no-ED/no-classical-DMRG/no-Lanczos/
+    no-dense-Hamiltonian diagnostics.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert
+  the larger interacting smoke records and their sector/policy fields.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`;
+  `large_n_evidence.json` now contains 11 evidence records and 4 explicit
+  REVIEW REQUIRED items.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report 44/44 quick PASS and the
+  larger-size smoke evidence.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 44/44 PASS.
+- Larger interacting smoke records:
+  - Heisenberg `N=40`, `chi=8`: energy decreased from `-0.0503191825` to
+    `-7.2436011523`; energy/site `-0.1810900288`; finite
+    `local_Sz_mid=0.0637607698`, `connected_SzSz_midbond=-0.0390051530`.
+  - spinless t-V `N=40`, `chi=8`, `target_n=20`: final energy
+    `-4.8837190124`; energy/site `-0.1220929753`; sector abs error and
+    variance are both `0.0`.
+  - Hubbard `N=20`, `chi=8`, `(N_up,N_down)=(10,10)`: final energy
+    `-20.0065749785`; energy/site `-1.0003287489`; sector abs errors and
+    variances are all `0.0`.
+  - all new records are finite, max bond <= chi, forbidden entries/gradients
+    are clean, and no ED/classical DMRG/Lanczos/dense Hamiltonian construction
+    was used.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are still full interacting
+  chi-convergence tables (multiple chi values at the requested larger sizes)
+  and literature-grade interacting large-N observable/correlation trends.
+
+Next action:
+Further progress toward completion now requires either explicit resource
+bounds for true interacting chi-convergence jobs, or another independent
+CPU-small literature/trend artifact that does not masquerade as those jobs.
+
+## Checkpoint Stage 11D-16: Larger-Size Bounded Chi Tables
+
+Goal:
+Convert the larger interacting smoke records into bounded chi=4/8 evidence at
+the largest CPU-small sizes already proven cheap, while continuing to label the
+remaining production-scale jobs as REVIEW REQUIRED.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - generalized the Heisenberg chi-table helper and added Heisenberg `N=40`,
+    `chi=4/8` table;
+  - extended hard-sector chi tables to spinless t-V `N=40`, `target_n=20`;
+  - extended hard-sector chi tables to Hubbard `N=20`,
+    `(N_up,N_down)=(10,10)`;
+  - updated `large_n_evidence.{json,md}` review reasons to reflect bounded
+    larger-size chi=4/8 evidence.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  new larger-size chi-table records and their evidence-artifact inclusion.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`;
+  `large_n_evidence.json` now contains 14 evidence records and 4 explicit
+  REVIEW REQUIRED items.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report 47/47 quick PASS and the
+  larger-size bounded chi tables.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 47/47 PASS.
+- Larger-size bounded chi tables:
+  - Heisenberg `N=40`: `chi=4` final energy `-4.1196170410`,
+    energy/site `-0.1029904260`; `chi=8` final energy `-7.2436011523`,
+    energy/site `-0.1810900288`; both histories decrease and chi=8 finishes
+    lower than chi=4.
+  - spinless t-V `N=40`, `target_n=20`: `chi=4` final energy
+    `-4.8828830862`, sector abs error `1.78e-14`; `chi=8` final energy
+    `-4.8837190124`, sector abs error `0.0`.
+  - Hubbard `N=20`, `(N_up,N_down)=(10,10)`: `chi=4` final energy
+    `-20.0049777606`, sector abs errors <= `1.78e-15`; `chi=8` final energy
+    `-20.0065749785`, sector abs errors `0.0`.
+  - all rows are finite, max bond <= chi, forbidden entries/gradients are
+    clean, and no ED/classical DMRG/Lanczos/dense Hamiltonian construction was
+    used.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are now production-scale
+  interacting chi-convergence beyond this bounded CPU-small envelope
+  (notably N=80 for Heisenberg/spinless and N=40 for Hubbard) and
+  literature-grade interacting observable/correlation trend tables.
+
+Next action:
+Do not claim completion from these bounded tables. Either add another
+independent CPU-small trend artifact, or request explicit resource limits for
+the remaining production-scale interacting jobs.
+
+## Checkpoint Stage 11D-17: Requested-Size Bounded Chi Tables
+
+Goal:
+Add bounded chi=4/8 evidence at the requested large sizes that still fit the
+CPU-small envelope: Heisenberg `N=80`, spinless t-V `N=80`, and Hubbard
+`N=40`.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - added Heisenberg `N=80`, `chi=8` smoke and `chi=4/8` table;
+  - added spinless t-V `N=80`, hard-sector `target_n=40`, `chi=8` smoke and
+    `chi=4/8` table;
+  - added Hubbard `N=40`, hard-sector `(N_up,N_down)=(20,20)`, `chi=8` smoke
+    and `chi=4/8` table;
+  - updated `large_n_evidence.{json,md}` review reasons to distinguish bounded
+    requested-size evidence from production-depth convergence.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert the
+  requested-size smoke/table records and their evidence-artifact inclusion.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`;
+  `large_n_evidence.json` now contains 20 evidence records and 4 explicit
+  REVIEW REQUIRED items.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report 53/53 quick PASS and requested-size
+  bounded chi tables.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 53/53 PASS.
+- Requested-size bounded chi tables:
+  - Heisenberg `N=80`: `chi=4` final energy `-8.9464081375`,
+    energy/site `-0.1118301017`; `chi=8` final energy `-16.0064711774`,
+    energy/site `-0.2000808897`; both histories decrease and chi=8 finishes
+    lower than chi=4.
+  - spinless t-V `N=80`, `target_n=40`: `chi=4` final energy
+    `-9.8891675005`, sector abs error `0.0`; `chi=8` final energy
+    `-9.8907643678`, sector abs error `2.13e-14`.
+  - Hubbard `N=40`, `(N_up,N_down)=(20,20)`: `chi=4` final energy
+    `-40.0119347250`, sector abs errors `1.42e-14`; `chi=8` final energy
+    `-40.0160469617`, sector abs errors `3.55e-15`.
+  - all rows are finite, max bond <= chi, forbidden entries/gradients are
+    clean, and no ED/classical DMRG/Lanczos/dense Hamiltonian construction was
+    used.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are production-depth convergence
+  over larger chi/step budgets and literature-grade interacting large-N
+  observable/correlation trend tables.
+
+Next action:
+Do not mark Stage 11 complete from smoke-budget requested-size tables. Either
+add independent CPU-small interacting observable evidence or request explicit
+resource bounds for production-depth convergence jobs.
+
+## Checkpoint Stage 11D-18: Heisenberg Large-N Entanglement Smoke
+
+Goal:
+Strengthen the large-N observable side with non-dense Heisenberg mid-bond
+entanglement entropy fields for the existing bounded AD records.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - reused `latticetn.canonical.entanglement_entropy` as report-only
+    postprocessing for Heisenberg large-N MPS records;
+  - added finite nonnegative `entanglement_entropy_midbond` fields to
+    Heisenberg `N=20/40/80` smoke and chi-table rows;
+  - included entropy in the pass criteria for Heisenberg large-N records
+    without claiming entanglement scaling or literature-grade convergence.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert
+  finite nonnegative entropy fields on Heisenberg large-N records and chi
+  table rows.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to include Heisenberg large-N entropy smoke
+  evidence.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 53/53 PASS.
+- Heisenberg bounded chi-table mid-bond entropy samples:
+  - `N=20`: `chi=4` entropy `0.6534781430`, `chi=8` entropy
+    `0.5158153895`.
+  - `N=40`: `chi=4` entropy `0.8007495829`, `chi=8` entropy `0.0`.
+  - `N=80`: `chi=4` entropy `0.0`, `chi=8` entropy `0.0`.
+- Entropy entries are finite and nonnegative; they are reported as smoke
+  observables, not as a literature-grade entanglement-scaling trend.
+- Updated fast validation: 52 passed, Score PASS.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are production-depth convergence
+  over larger chi/step budgets and literature-grade interacting large-N
+  observable/correlation trend tables.
+
+Next action:
+Continue only with bounded CPU-small evidence, or request explicit resource
+bounds for production-depth convergence/literature trend jobs before claiming
+Stage 11 completion.
+
+## Checkpoint Stage 11D-21: Bounded Chi=32 Large-N Evidence
+
+Goal:
+Move the requested-size large-N chi tables another rung toward the Stage 11
+convergence target by adding `chi=32` rows while preserving CPU-small quick
+validation and the distinction from production-depth convergence.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - widened Heisenberg large-N chi tables from `chi=4/8/16` to
+    `chi=4/8/16/32`;
+  - widened spinless and Hubbard hard-sector chi tables from `chi=4/8/16` to
+    `chi=4/8/16/32`;
+  - renamed chi-table records to `chi4_8_16_32`;
+  - updated large-N evidence review reasons to reflect the wider bounded table.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to require
+  the renamed records and four chi rows.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report bounded `chi=4/8/16/32` evidence
+  while keeping production-depth convergence as REVIEW REQUIRED.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 53/53 PASS.
+- Updated fast validation: 52 passed, Score PASS.
+- Representative requested-size `chi=32` rows:
+  - Heisenberg `N=80`: final energy `-29.6968503865`, energy/site
+    `-0.3712106298`, max bond `32`, finite local/connected `Sz`, no
+    ED/DMRG/Lanczos/dense Hamiltonian.
+  - spinless t-V `N=80`, `target_n=40`: final energy `-9.8906964799`,
+    energy/site `-0.1236337060`, max bond `32`, sector abs error `0.0`,
+    `local_density_mid=0.9999999830`.
+  - Hubbard `N=40`, `(N_up,N_down)=(20,20)`: final energy
+    `-40.0133399656`, energy/site `-1.0003334991`, max bond `32`,
+    sector abs errors `3.55e-15` and `1.07e-14`,
+    `local_density_mid=0.9999999927`,
+    `double_occupancy_mid=1.2794610278e-08`,
+    `local_sz_mid=0.4999999828`.
+- Heisenberg requested-size rows remain monotonic through `chi=32`. Spinless
+  and Hubbard hard-sector rows remain finite, sector-clean, and physical but
+  are not claimed as monotonic under the tiny two-local-step budget.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are production-depth convergence
+  over larger optimization budgets and `chi=64`, plus literature-grade
+  interacting large-N observable/correlation trend tables.
+
+Next action:
+Continue only with bounded CPU-small evidence, or request explicit resource
+bounds for production-depth convergence/literature trend jobs before claiming
+Stage 11 completion.
+
+## Checkpoint Stage 11D-20: Bounded Chi=16 Large-N Evidence
+
+Goal:
+Move the existing requested-size large-N chi tables one notch closer to the
+Stage 11 convergence envelope by adding `chi=16` rows while keeping the suite
+CPU-small and not claiming production-depth convergence.
+
+Files changed:
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - widened Heisenberg large-N chi tables from `chi=4/8` to `chi=4/8/16`;
+  - widened spinless and Hubbard hard-sector chi tables from `chi=4/8` to
+    `chi=4/8/16`;
+  - renamed chi-table records to `chi4_8_16`;
+  - generalized the Heisenberg monotonic check to
+    `higher_chi_energy_not_worse`;
+  - kept hard-sector tables as finite/sector-clean bounded evidence without
+    asserting monotonic energy convergence from the tiny two-local-step budget.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to require
+  the renamed records and three chi rows.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report bounded `chi=4/8/16` evidence.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 53/53 PASS.
+- Updated fast validation: 52 passed, Score PASS.
+- Representative requested-size `chi=16` rows:
+  - Heisenberg `N=80`: final energy `-25.5082156387`, energy/site
+    `-0.3188526955`, max bond `16`, no ED/DMRG/Lanczos/dense Hamiltonian.
+  - spinless t-V `N=80`, `target_n=40`: final energy `-9.8924158348`,
+    energy/site `-0.1236551979`, max bond `16`, sector abs error
+    `7.11e-15`, `local_density_mid=0.9999999525`.
+  - Hubbard `N=40`, `(N_up,N_down)=(20,20)`: final energy
+    `-40.0127510985`, energy/site `-1.0003187775`, max bond `16`, sector abs
+    errors `7.11e-15`, `local_density_mid=0.9999999864`,
+    `double_occupancy_mid=7.4721999461e-09`,
+    `local_sz_mid=0.4999999855`.
+- Heisenberg and spinless requested-size rows improve through `chi=16`.
+  Hubbard remains finite, sector-clean, and physical but is not claimed as
+  monotonic under this tiny hard-sector smoke budget.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are production-depth convergence
+  over larger chi/step budgets, especially `chi=32/64`, and
+  literature-grade interacting large-N observable/correlation trend tables.
+
+Next action:
+Continue only with bounded CPU-small evidence, or request explicit resource
+bounds for production-depth convergence/literature trend jobs before claiming
+Stage 11 completion.
+
+## Checkpoint Stage 11D-19: Hard-Sector Local Observable Smoke
+
+Goal:
+Strengthen spinless and Hubbard large-N hard-sector evidence with non-dense
+one-site observables exposed through the Stage 10 runner API.
+
+Files changed:
+- Updated `latticetn/runner.py`:
+  - added normalized final-MPS one-site expectation contractions;
+  - exposed `local_density_mid` for spinless/Hubbard hard-sector runs;
+  - exposed Hubbard `double_occupancy_mid` and `local_sz_mid`.
+- Updated `scripts/run_physics_benchmark_suite.py`:
+  - requested the new local observables for large-N hard-sector smoke and
+    chi-table records;
+  - included physical range checks in record pass criteria.
+- Updated `tests/physics/test_stage11_benchmark_suite_runner.py` to assert
+  finite local observables and physical ranges for spinless and Hubbard
+  large-N hard-sector records.
+- Regenerated quick benchmark outputs under `outputs/physics_benchmarks/`.
+- Updated `docs/STAGE11_ACCEPTANCE_AUDIT.md` and
+  `docs/STAGE11_FINAL_REPORT.md` to report the new local-observable evidence.
+- Updated this progress log.
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe -m pytest -q tests/physics/test_stage11_benchmark_suite_runner.py`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/run_physics_benchmark_suite.py --suite quick`
+- `C:\Apps\Miniforge3\envs\comfyui\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Stage 11 runner test: 2 passed.
+- Quick benchmark suite: 53/53 PASS.
+- Updated fast validation: 52 passed, Score PASS.
+- Representative hard-sector local-observable samples:
+  - spinless t-V `N=80`, `chi=8`: `local_density_mid`
+    `0.9999999399732036`, sector abs error `2.13e-14`.
+  - Hubbard `N=40`, `chi=8`: `local_density_mid`
+    `0.9999999804780064`, `double_occupancy_mid`
+    `3.6724629845826875e-08`, `local_sz_mid`
+    `0.49999995074569953`, sector abs errors `3.55e-15`.
+- All added local observable fields are produced from final MPS contractions;
+  no ED, classical DMRG, Lanczos, or dense Hamiltonian construction was added
+  to large-N hard-sector records.
+
+Current failing test or bottleneck:
+- No quick/full-pytest failure is known with writable workspace basetemp.
+  Remaining Stage 11 REVIEW REQUIRED items are production-depth convergence
+  over larger chi/step budgets and literature-grade interacting large-N
+  observable/correlation trend tables.
+
+Next action:
+Continue only with bounded CPU-small evidence, or request explicit resource
+bounds for production-depth convergence/literature trend jobs before claiming
+Stage 11 completion.

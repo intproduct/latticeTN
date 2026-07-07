@@ -155,18 +155,14 @@ def spinless_fermion_dense(
     for i in range(N):
         H = H + (-mu) * _global_single(nmh, i, N, dtype, device)
 
-    # nearest-neighbor hopping -t * (c^d_i c_{i+1} + c^d_{i+1} c_i). We build
-    # the two-site operator with the explicit JW string on sites 0..i-1 (the
-    # string between i and i+1 cancels). Concretely:
-    #   c^d_i c_{i+1}  = F^i x c^d x c x I x ...
-    #   c^d_{i+1} c_i  = F^i x c x c^d x I x ...
+    # nearest-neighbor hopping -t * (c^d_i c_{i+1} + c^d_{i+1} c_i). The full
+    # JW single-operator strings cancel on every site left of the bond for this
+    # adjacent product, so the correct two-site matrix has no left F-string.
     for i in range(N - 1):
         def _two_site_hop(op_i, op_i1):
             term = None
             for k in range(N):
-                if k < i:
-                    g = ops["F"]
-                elif k == i:
+                if k == i:
                     g = op_i
                 elif k == i + 1:
                     g = op_i1

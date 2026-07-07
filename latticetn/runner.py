@@ -28,6 +28,8 @@ from .sector_observables import (
     total_ndown,
     hubbard_sector_leakage_report,
 )
+from .charges import local_number_operator, local_ntot_operator, local_sz_operator
+from .fermion_operators import hubbard_local_operators
 from . import contractions as K
 
 
@@ -131,6 +133,25 @@ def _sector_report(model: ModelSpec, mps: MPS) -> dict | None:
         if nup is not None and ndown is not None:
             return hubbard_sector_leakage_report(mps, target_nup=nup, target_ndown=ndown)
     return None
+
+
+def _local_expectation(mps: MPS, local_op: tc.Tensor, site: int) -> float:
+    if not 0 <= site < mps.N:
+        raise ValueError(f"site index {site} outside chain length {mps.N}")
+    q = local_op.to(dtype=mps.dtype, device=mps.device)
+    identity = tc.eye(mps.dim, dtype=mps.dtype, device=mps.device)
+    numer = tc.ones((1, 1), dtype=mps.dtype, device=mps.device)
+    denom = tc.ones((1, 1), dtype=mps.dtype, device=mps.device)
+    for idx, A in enumerate(mps.tensors):
+        op = q if idx == site else identity
+        numer = tc.einsum("ab,asi,st,btj->ij", numer, A.conj(), op, A)
+        denom = tc.einsum("ab,asi,bsj->ij", denom, A.conj(), A)
+    value = numer.reshape(()) / denom.reshape(())
+    return _float(value)
+
+
+def _mid_site(model: ModelSpec) -> int:
+    return model.N // 2
 
 
 def _sector_penalty(model: ModelSpec, method: MethodConfig, mps: MPS) -> tc.Tensor:
@@ -337,6 +358,23 @@ def _observables(names: list[str], model: ModelSpec, result: dict) -> dict:
             obs["gradient_norm"] = summary.get("final_gradient_norm")
         elif name == "runtime":
             obs["runtime"] = summary.get("runtime")
+        elif name == "local_density_mid":
+            if model.name == "spinless_tv":
+                op = local_number_operator("spinless_tv", mps.dtype, mps.device)
+            elif model.name == "hubbard":
+                op = local_ntot_operator(mps.dtype, mps.device)
+            else:
+                raise NotImplementedError(f"observable {name!r} is not implemented for {model.name!r}")
+            obs["local_density_mid"] = _local_expectation(mps, op, _mid_site(model))
+        elif name == "double_occupancy_mid":
+            if model.name != "hubbard":
+                raise NotImplementedError(f"observable {name!r} is implemented only for Hubbard")
+            op = hubbard_local_operators(dtype=mps.dtype, device=mps.device)["double_occ"]
+            obs["double_occupancy_mid"] = _local_expectation(mps, op, _mid_site(model))
+        elif name == "local_sz_mid":
+            if model.name != "hubbard":
+                raise NotImplementedError(f"observable {name!r} is implemented only for Hubbard")
+            obs["local_sz_mid"] = _local_expectation(mps, local_sz_operator(mps.dtype, mps.device), _mid_site(model))
         else:
             raise NotImplementedError(f"observable {name!r} is not implemented")
     return obs

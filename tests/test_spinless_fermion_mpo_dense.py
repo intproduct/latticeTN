@@ -1,12 +1,13 @@
 """Stage 7A: spinless fermion MPO -> dense must match the dense reference.
 
-``MPO.generate_spinless_fermion`` builds a bond-dim-6 fermionic MPO with an
-explicit Jordan-Wigner parity-carrying virtual state. Its ``to_dense`` must
+``MPO.generate_spinless_fermion`` builds a bond-dim-5 fermionic Hamiltonian MPO
+where the adjacent hopping terms use the JW-reduced local product. Its ``to_dense`` must
 match ``operators.spinless_fermion_dense`` (which builds the global operators
 with the full JW string) across N=2..6 and several (t, V, mu) parameter sets.
 
-This is the fermionic analogue of ``test_heisenberg_mpo_dense``. The MPO is
-NOT a hard-core-boson MPO: the parity string is the key.
+This is the fermionic analogue of ``test_heisenberg_mpo_dense``. Nonlocal
+one-body observables still require explicit JW strings; adjacent Hamiltonian
+hops do not carry a leftover left string.
 """
 
 from __future__ import annotations
@@ -59,8 +60,8 @@ def test_mpo_open_boundary_shapes_and_bond_dim():
         t=1.0, V=1.0, mu=0.0)
     assert mpo.tensors[0].shape[0] == 1       # left boundary
     assert mpo.tensors[-1].shape[1] == 1      # right boundary
-    # bulk bond dimension is 6 for the fermion MPO
-    assert mpo.tensors[1].shape[0] == 6 and mpo.tensors[1].shape[1] == 6
+    # bulk bond dimension is 5 for the JW-reduced nearest-neighbor Hamiltonian MPO
+    assert mpo.tensors[1].shape[0] == 5 and mpo.tensors[1].shape[1] == 5
 
 
 def test_mpo_t_scaling():

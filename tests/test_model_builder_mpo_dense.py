@@ -2,8 +2,8 @@
 
 ``build_mpo(spec).to_dense()`` must match ``build_dense(spec)`` for the
 Heisenberg and spinless fermion t-V presets across N and parameter sets. The
-fermion MPO carries the JW parity string via its parity-carrying virtual state
-(it is NOT a hard-core-boson MPO).
+spinless Hamiltonian uses the JW-reduced adjacent hopping product; nonlocal
+fermionic observables still require explicit strings.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def test_fermion_mpo_dense_matches_model_dense():
 
 
 def test_mpo_open_boundary_shapes():
-    # Heisenberg MPO bond dim 5, fermion MPO bond dim 6.
+    # Heisenberg MPO bond dim 5, spinless t-V MPO bond dim 5.
     hspec = heisenberg_model(5, J=1.0)
     hmpo = build_mpo(hspec)
     assert hmpo.tensors[0].shape[0] == 1
@@ -55,7 +55,7 @@ def test_mpo_open_boundary_shapes():
     fmpo = build_mpo(fspec)
     assert fmpo.tensors[0].shape[0] == 1
     assert fmpo.tensors[-1].shape[1] == 1
-    assert fmpo.tensors[1].shape[0] == 6
+    assert fmpo.tensors[1].shape[0] == 5
 
 
 def test_mpo_dense_is_hermitian():

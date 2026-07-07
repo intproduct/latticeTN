@@ -3,8 +3,9 @@
 The spinless fermion t-V preset built via ``model_builder`` must produce a
 dense Hamiltonian byte-identical to the existing
 ``operators.spinless_fermion_dense`` reference (Stage 7A, Jordan-Wigner, open
-boundary, complex128). The fermionic terms MUST keep the JW parity string
-(they do NOT degrade to hard-core-boson terms).
+boundary, complex128). Nearest-neighbor hopping uses the JW-reduced adjacent
+product after the left strings cancel; global single-fermion operators still
+carry strings.
 """
 
 from __future__ import annotations
@@ -68,16 +69,14 @@ def test_fermion_model_ground_energy_matches_ed():
             assert abs(E0 - E0_ref) < 1e-9, (N, t, V, mu, E0, E0_ref)
 
 
-def test_fermion_model_not_hardcore_boson():
-    """For N>=3 the fermion dense H differs from a hard-core-boson build
-    (the JW parity string is real). The preset's dense must NOT match a
-    no-parity bosonic hop build for N>=3."""
+def test_fermion_model_nearest_neighbor_strings_cancel_and_global_ops_anticommute():
+    """The NN Hamiltonian is JW-reduced, while global fermion ops keep CAR."""
     from latticetn.fermion_operators import fermion_operators
     from latticetn.operators import _kron
     ops = fermion_operators(dtype=DTYPE)
-    I, c, cdag = ops["I"], ops["c"], ops["cdag"]
+    I, c, cdag, F = ops["I"], ops["c"], ops["cdag"], ops["F"]
 
-    def hardcore_boson(N, t):
+    def adjacent_hop_hamiltonian(N, t):
         H = tc.zeros((2 ** N, 2 ** N), dtype=DTYPE)
         for i in range(N - 1):
             term = None
@@ -87,14 +86,21 @@ def test_fermion_model_not_hardcore_boson():
             H = H + (-t) * (term + term.conj().T)
         return H
 
+    def global_op(local, site, N):
+        term = None
+        for k in range(N):
+            g = F if k < site else (local if k == site else I)
+            term = g if term is None else _kron(term, g)
+        return term
+
     for N in [2, 3, 4, 5]:
         spec = spinless_fermion_tv_model(N, t=1.0, V=0.0, mu=0.0)
         Hf = build_dense(spec)
-        Hb = hardcore_boson(N, 1.0)
-        if N == 2:
-            assert tc.allclose(Hf, Hb, atol=1e-12), N
-        else:
-            assert not tc.allclose(Hf, Hb, atol=1e-9), N
+        assert tc.allclose(Hf, adjacent_hop_hamiltonian(N, 1.0), atol=1e-12), N
+        if N >= 2:
+            ci = global_op(c, 0, N)
+            cjdag = global_op(cdag, 1, N)
+            assert tc.allclose(ci @ cjdag + cjdag @ ci, tc.zeros_like(Hf), atol=1e-12)
 
 
 def test_fermion_model_native_rayleigh_matches_dense_energy():

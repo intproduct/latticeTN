@@ -26,6 +26,10 @@ FAST_TESTS = [
     "tests/test_heisenberg_mpo_dense.py",
     "tests/test_heisenberg_energy_dense_compare.py",
     "tests/test_heisenberg_variational_smoke.py",
+    "tests/physics/test_stage11_hamiltonian_audit.py",
+    "tests/physics/test_stage11_small_n_energy_benchmarks.py",
+    "tests/physics/test_stage11_observables_correlations.py",
+    "tests/physics/test_stage11_benchmark_suite_runner.py",
 ]
 
 FULL_EXTRA_COMMANDS = [

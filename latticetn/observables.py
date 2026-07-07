@@ -90,6 +90,14 @@ def dense_expect_two_site(state, op1, i, op2, j, N):
     return val
 
 
+def dense_connected_correlation(state, op1, i, op2, j, N):
+    """Connected correlation <op1_i op2_j> - <op1_i><op2_j>."""
+    two = dense_expect_two_site(state, op1, i, op2, j, N)
+    one_i = dense_expect_local(state, op1, i, N)
+    one_j = dense_expect_local(state, op2, j, N)
+    return two - one_i * one_j
+
+
 def dense_bond_energy_heisenberg(state, i, N):
     """<S_i . S_{i+1}> for sites (i, i+1) using S = sigma/2.
 
@@ -169,6 +177,12 @@ def mps_expect_two_site(mps, op1, i, op2, j):
     return dense_expect_two_site(psi, op1, i, op2, j, mps.N)
 
 
+def mps_connected_correlation(mps, op1, i, op2, j):
+    """Connected two-site correlation of an MPS, via dense reference."""
+    psi = _mps_dense_state(mps)
+    return dense_connected_correlation(psi, op1, i, op2, j, mps.N)
+
+
 def mps_bond_energy_heisenberg(mps, i):
     """Nearest-neighbor bond energy <S_i . S_{i+1}> of an MPS, via dense ref."""
     psi = _mps_dense_state(mps)
@@ -187,39 +201,32 @@ def mps_entanglement_entropy(mps, cut):
 #
 # These are small-N dense-reference observables for the open-boundary 1D
 # spinless fermion t-V chain. They are NOT full graded fermionic tensors; they
-# use the Jordan-Wigner construction (parity string F = (-1)^n on every site
-# left of the operator), matching ``operators.spinless_fermion_dense`` and
-# ``MPO.generate_spinless_fermion``.
+# match the Stage 11 Jordan-Wigner convention used by
+# ``operators.spinless_fermion_dense`` and ``MPO.generate_spinless_fermion``.
 #
 # - local density <n_i>             : diagonal, no JW string needed.
 # - density-density <n_i n_j>       : diagonal, no JW string needed.
-# - NN hopping <c^d_i c_{i+1}+h.c.> : the JW strings between i and i+1 cancel,
-#   so the two-site operator is the ordinary bosonic product (c^d on i,
-#   c on i+1) + h.c. — but the GLOBAL operators carry F on sites 0..i-1. We
-#   build the global hopping observable with the explicit JW string so it is
-#   a genuine fermionic observable (and matches the dense Hamiltonian's
-#   hopping term exactly).
+# - NN hopping <c^d_i c_{i+1}+h.c.> : adjacent JW strings cancel on all sites
+#   left of the bond, so this helper uses the reduced two-site product
+#   (c^d on i, c on i+1) + h.c. Nonlocal Green functions would need explicit
+#   JW strings and are intentionally outside this nearest-neighbor helper.
 # ---------------------------------------------------------------------------
 
 
 def _fermion_global_two_site(op_i, i, op_i1, i1, N, dtype, device) -> tc.Tensor:
-    """Global fermionic two-site operator with the JW parity string.
+    """Reduced adjacent spinless-fermion two-site operator.
 
-    Builds ``F^{i} x op_i x op_{i1} x I...`` (parity F on every site left of
-    ``i``, then ``op_i`` at ``i``, ``op_{i1}`` at ``i1``, identity elsewhere).
-    For nearest-neighbor (i1 = i+1) the JW string between the two sites
-    cancels, so this equals the reduced two-site product with the left parity
-    string — exactly the form used in ``operators.spinless_fermion_dense``.
+    For nearest-neighbor Hamiltonian terms, the two Jordan-Wigner strings
+    cancel on all sites left of the bond. This builds the remaining local
+    product ``op_i`` at ``i`` and ``op_i1`` at ``i1`` with identity elsewhere.
+    It is not the helper for nonlocal single-particle Green functions.
     """
     ops = fermion_operators(dtype=dtype, device=device)
     I = ops["I"]
-    F = ops["F"]
     assert i < i1, "use i < i1 (left factor first)"
     term = None
     for k in range(N):
-        if k < i:
-            g = F
-        elif k == i:
+        if k == i:
             g = op_i
         elif k == i1:
             g = op_i1
@@ -256,9 +263,9 @@ def dense_fermion_density_density(state, i: int, j: int, N: int) -> tc.Tensor:
 def dense_fermion_nn_hopping(state, i: int, N: int) -> tc.Tensor:
     """<c^d_i c_{i+1} + c^d_{i+1} c_i> for a normalized dense fermion state.
 
-    Nearest-neighbor hopping observable. Built with the explicit Jordan-Wigner
-    parity string F on sites 0..i-1 (matching the dense Hamiltonian's hopping
-    term), so it is a genuine fermionic observable. Returns a real scalar.
+    Nearest-neighbor hopping observable. The adjacent JW strings cancel on all
+    sites left of the bond, matching the dense Hamiltonian's reduced hopping
+    term. Returns a real scalar.
     """
     assert 0 <= i < N - 1, "NN hopping requires 0 <= i < N-1"
     dt = state.dtype if tc.is_complex(state) else tc.complex128
@@ -267,13 +274,12 @@ def dense_fermion_nn_hopping(state, i: int, N: int) -> tc.Tensor:
     c = ops["c"]
     cdag = ops["cdag"]
     lo, hi = (i, i + 1)
-    # c^d_i c_{i+1}  with JW string on sites 0..i-1
+    # c^d_i c_{i+1} with the adjacent JW strings cancelled.
     op_cdag_c = _fermion_global_two_site(cdag, lo, c, hi, N, dt, dev)
-    # c^d_{i+1} c_i : swap the two factors (still NN, JW string on 0..i-1)
+    # c^d_{i+1} c_i: swap the two factors (still nearest-neighbor reduced).
     op_c_cdag = _fermion_global_two_site(c, lo, cdag, hi, N, dt, dev)
     val = state.conj() @ ((op_cdag_c + op_c_cdag) @ state)
     return val.real
-
 
 def mps_fermion_local_density(mps, site: int) -> tc.Tensor:
     """<n_site> of a fermion MPS, via dense reference."""
@@ -313,7 +319,7 @@ def mps_fermion_nn_hopping(mps, i: int) -> tc.Tensor:
 #   carries P on sites 0..i-1 from BOTH factors (which cancel) plus one
 #   surviving P at site i from the right factor's string -> the two-site
 #   operator is (c^d_sigma @ P) on site i, c_sigma on site i+1, plus its h.c.
-#   (P @ c_sigma) on site i, c^d_sigma on site i+1 — exactly the form used in
+#   (P @ c_sigma) on site i, c^d_sigma on site i+1 - exactly the form used in
 #   ``operators.hubbard_dense``.
 # ---------------------------------------------------------------------------
 

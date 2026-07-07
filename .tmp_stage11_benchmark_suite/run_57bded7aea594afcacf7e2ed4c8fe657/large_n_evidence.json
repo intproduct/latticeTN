@@ -1,0 +1,2634 @@
+{
+  "status": "REVIEW REQUIRED",
+  "scope": "Stage 11 large-N evidence extracted from the CPU-small quick suite.",
+  "evidence_records": [
+    {
+      "case_id": "large_n_ad_heisenberg_N20_chi8_no_reference",
+      "suite": "large_n_ad",
+      "model": "heisenberg",
+      "parameters": {
+        "J": 1.0,
+        "chi": 8,
+        "steps": 3,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {},
+      "N": 20,
+      "chi": 0,
+      "method": "large-N AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -3.8076497833458696,
+      "energy_per_site": -0.19038248916729347,
+      "observables": {
+        "initial_energy": -0.33074899117160095,
+        "final_energy": -3.8076497833458696,
+        "energy_history": [
+          -0.33074899117160095,
+          -0.544132488101412,
+          -2.218074682552634,
+          -3.8076497833458696
+        ],
+        "grad_norm_history": [
+          0.0,
+          1.1573980178853156,
+          8.898422688866102,
+          9.546897292088046
+        ],
+        "max_bond": 8,
+        "local_Sz_mid": 0.01860370171808113,
+        "connected_SzSz_midbond": -0.025512142108420024,
+        "entanglement_entropy_midbond": 0.515815389545229,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "energy_decreases": true,
+        "finite_energy": true,
+        "max_bond": 8
+      },
+      "runtime_sec": 0.2481335001066327,
+      "notes": "No ED, no classical DMRG, no Lanczos, and no dense Hamiltonian construction; convergence to a literature value is not asserted."
+    },
+    {
+      "case_id": "large_n_chi_table_heisenberg_N20_chi4_8_16_32_no_reference",
+      "suite": "large_n_ad",
+      "model": "heisenberg",
+      "parameters": {
+        "J": 1.0,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "steps": 3,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {},
+      "N": 20,
+      "chi": 0,
+      "method": "resource-bounded large-N AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -6.695325965301357,
+      "energy_per_site": -0.3347662982650678,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "initial_energy": -0.019605219458196398,
+            "final_energy": -2.0594337898256816,
+            "energy_per_site": -0.10297168949128407,
+            "energy_history": [
+              -0.019605219458196398,
+              -0.2196537792243554,
+              -1.1264299249107503,
+              -2.0594337898256816
+            ],
+            "grad_norm_history": [
+              0.0,
+              1.5786608376738809,
+              8.331059951556758,
+              8.661904545221503
+            ],
+            "max_bond": 4,
+            "local_Sz_mid": 0.08917805787905496,
+            "connected_SzSz_midbond": -0.032388364393857616,
+            "entanglement_entropy_midbond": 0.6534781429768031,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 8,
+            "initial_energy": -0.33074899117160095,
+            "final_energy": -3.8076497833458696,
+            "energy_per_site": -0.19038248916729347,
+            "energy_history": [
+              -0.33074899117160095,
+              -0.544132488101412,
+              -2.218074682552634,
+              -3.8076497833458696
+            ],
+            "grad_norm_history": [
+              0.0,
+              1.1573980178853156,
+              8.898422688866102,
+              9.546897292088046
+            ],
+            "max_bond": 8,
+            "local_Sz_mid": 0.01860370171808113,
+            "connected_SzSz_midbond": -0.025512142108420024,
+            "entanglement_entropy_midbond": 0.515815389545229,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 16,
+            "initial_energy": -0.02008010733808518,
+            "final_energy": -5.319018469614985,
+            "energy_per_site": -0.2659509234807492,
+            "energy_history": [
+              -0.02008010733808518,
+              -0.2814028186897497,
+              -3.1507536320585605,
+              -5.319018469614985
+            ],
+            "grad_norm_history": [
+              0.0,
+              0.764161722285273,
+              11.403751449937229,
+              11.532932528651457
+            ],
+            "max_bond": 16,
+            "local_Sz_mid": -0.11736424315099134,
+            "connected_SzSz_midbond": -0.1650368872289994,
+            "entanglement_entropy_midbond": 0.7471031563075761,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 32,
+            "initial_energy": -0.41883436489057946,
+            "final_energy": -6.695325965301357,
+            "energy_per_site": -0.3347662982650678,
+            "energy_history": [
+              -0.41883436489057946,
+              -0.741900809031281,
+              -4.451832238533664,
+              -6.695325965301357
+            ],
+            "grad_norm_history": [
+              0.0,
+              0.7799401587063862,
+              14.83352778749657,
+              12.446789920791842
+            ],
+            "max_bond": 32,
+            "local_Sz_mid": -0.0667727782353498,
+            "connected_SzSz_midbond": -0.04950680380740029,
+            "entanglement_entropy_midbond": 0.15282011239444224,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          }
+        ],
+        "energy_decreases_each_chi": true,
+        "higher_chi_energy_not_worse": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "energy_decreases_each_chi": true,
+        "higher_chi_energy_not_worse": true,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 1.1980328999925405,
+      "notes": "CPU-small chi table only. This strengthens large-N convergence evidence but does not replace the requested full N=40/80 production runs."
+    },
+    {
+      "case_id": "large_n_ad_heisenberg_N40_chi8_no_reference",
+      "suite": "large_n_ad",
+      "model": "heisenberg",
+      "parameters": {
+        "J": 1.0,
+        "chi": 8,
+        "steps": 3,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {},
+      "N": 40,
+      "chi": 0,
+      "method": "bounded larger-size AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -7.243601152332855,
+      "energy_per_site": -0.18109002880832137,
+      "observables": {
+        "initial_energy": -0.05031918246715765,
+        "final_energy": -7.243601152332855,
+        "energy_history": [
+          -0.05031918246715765,
+          -0.4692168164644956,
+          -3.8851730072065043,
+          -7.243601152332855
+        ],
+        "grad_norm_history": [
+          0.0,
+          1.2393561812510872,
+          12.46273883586326,
+          13.001519692325877
+        ],
+        "max_bond": 8,
+        "local_Sz_mid": 0.06376076977981784,
+        "connected_SzSz_midbond": -0.039005152957130064,
+        "entanglement_entropy_midbond": 0.0,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "energy_decreases": true,
+        "finite_energy": true,
+        "max_bond": 8
+      },
+      "runtime_sec": 0.5303508001379669,
+      "notes": "CPU-small N=40 interacting AD smoke only; no ED, no classical DMRG, no Lanczos, and no dense Hamiltonian construction."
+    },
+    {
+      "case_id": "large_n_chi_table_heisenberg_N40_chi4_8_16_32_no_reference",
+      "suite": "large_n_ad",
+      "model": "heisenberg",
+      "parameters": {
+        "J": 1.0,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "steps": 3,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {},
+      "N": 40,
+      "chi": 0,
+      "method": "resource-bounded large-N AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -14.100291706893175,
+      "energy_per_site": -0.3525072926723294,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "initial_energy": -0.30234010937479394,
+            "final_energy": -4.119617041022009,
+            "energy_per_site": -0.10299042602555022,
+            "energy_history": [
+              -0.30234010937479394,
+              -0.6903062876592587,
+              -2.4185688213652656,
+              -4.119617041022009
+            ],
+            "grad_norm_history": [
+              0.0,
+              2.1376200670088754,
+              11.282378678655082,
+              11.03834571927028
+            ],
+            "max_bond": 4,
+            "local_Sz_mid": 0.06307931247505347,
+            "connected_SzSz_midbond": -0.021241973933552545,
+            "entanglement_entropy_midbond": 0.8007495828860317,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 8,
+            "initial_energy": -0.05031918246715765,
+            "final_energy": -7.243601152332855,
+            "energy_per_site": -0.18109002880832137,
+            "energy_history": [
+              -0.05031918246715765,
+              -0.4692168164644956,
+              -3.8851730072065043,
+              -7.243601152332855
+            ],
+            "grad_norm_history": [
+              0.0,
+              1.2393561812510872,
+              12.46273883586326,
+              13.001519692325877
+            ],
+            "max_bond": 8,
+            "local_Sz_mid": 0.06376076977981784,
+            "connected_SzSz_midbond": -0.039005152957130064,
+            "entanglement_entropy_midbond": 0.0,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 16,
+            "initial_energy": 0.05639542479075848,
+            "final_energy": -12.630814568066144,
+            "energy_per_site": -0.3157703642016536,
+            "energy_history": [
+              0.05639542479075848,
+              -0.4386930855403815,
+              -7.059811309340109,
+              -12.630814568066144
+            ],
+            "grad_norm_history": [
+              0.0,
+              0.8877180657952969,
+              15.033249396195613,
+              19.514348958812754
+            ],
+            "max_bond": 16,
+            "local_Sz_mid": -0.20502056478083655,
+            "connected_SzSz_midbond": -0.06483951010481193,
+            "entanglement_entropy_midbond": 0.0,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 32,
+            "initial_energy": -0.025859872771046375,
+            "final_energy": -14.100291706893175,
+            "energy_per_site": -0.3525072926723294,
+            "energy_history": [
+              -0.025859872771046375,
+              -0.6022423016181048,
+              -9.631599638581015,
+              -14.100291706893175
+            ],
+            "grad_norm_history": [
+              0.0,
+              0.724126508957685,
+              17.67933418075032,
+              19.82074999099461
+            ],
+            "max_bond": 32,
+            "local_Sz_mid": -0.10918963367769845,
+            "connected_SzSz_midbond": -0.10429206870032916,
+            "entanglement_entropy_midbond": 0.0,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          }
+        ],
+        "energy_decreases_each_chi": true,
+        "higher_chi_energy_not_worse": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "energy_decreases_each_chi": true,
+        "higher_chi_energy_not_worse": true,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 2.6237345000263304,
+      "notes": "CPU-small chi table only. This strengthens large-N convergence evidence but does not replace the requested full N=40/80 production runs."
+    },
+    {
+      "case_id": "large_n_ad_heisenberg_N80_chi8_no_reference",
+      "suite": "large_n_ad",
+      "model": "heisenberg",
+      "parameters": {
+        "J": 1.0,
+        "chi": 8,
+        "steps": 3,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {},
+      "N": 80,
+      "chi": 0,
+      "method": "bounded larger-size AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -16.006471177449054,
+      "energy_per_site": -0.20008088971811316,
+      "observables": {
+        "initial_energy": -0.27488377754590554,
+        "final_energy": -16.006471177449054,
+        "energy_history": [
+          -0.27488377754590554,
+          -1.21197417158191,
+          -8.985707840844032,
+          -16.006471177449054
+        ],
+        "grad_norm_history": [
+          0.0,
+          1.841937911771688,
+          19.925088356392376,
+          20.31229837468207
+        ],
+        "max_bond": 8,
+        "local_Sz_mid": 0.29838853310505553,
+        "connected_SzSz_midbond": -0.06274262477284394,
+        "entanglement_entropy_midbond": 0.0,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "energy_decreases": true,
+        "finite_energy": true,
+        "max_bond": 8
+      },
+      "runtime_sec": 1.0099284001626074,
+      "notes": "CPU-small N=80 interacting AD smoke only; no ED, no classical DMRG, no Lanczos, and no dense Hamiltonian construction."
+    },
+    {
+      "case_id": "large_n_chi_table_heisenberg_N80_chi4_8_16_32_no_reference",
+      "suite": "large_n_ad",
+      "model": "heisenberg",
+      "parameters": {
+        "J": 1.0,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "steps": 3,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {},
+      "N": 80,
+      "chi": 0,
+      "method": "resource-bounded large-N AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -29.696850386497413,
+      "energy_per_site": -0.37121062983121766,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "initial_energy": -1.058129328907935,
+            "final_energy": -8.946408137521404,
+            "energy_per_site": -0.11183010171901756,
+            "energy_history": [
+              -1.058129328907935,
+              -1.8508583074900227,
+              -5.462605197855371,
+              -8.946408137521404
+            ],
+            "grad_norm_history": [
+              0.0,
+              2.9629113272804504,
+              16.258305639960394,
+              15.753580783611758
+            ],
+            "max_bond": 4,
+            "local_Sz_mid": 0.17642021795752735,
+            "connected_SzSz_midbond": -0.05516604432406132,
+            "entanglement_entropy_midbond": 0.0,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 8,
+            "initial_energy": -0.27488377754590554,
+            "final_energy": -16.006471177449054,
+            "energy_per_site": -0.20008088971811316,
+            "energy_history": [
+              -0.27488377754590554,
+              -1.21197417158191,
+              -8.985707840844032,
+              -16.006471177449054
+            ],
+            "grad_norm_history": [
+              0.0,
+              1.841937911771688,
+              19.925088356392376,
+              20.31229837468207
+            ],
+            "max_bond": 8,
+            "local_Sz_mid": 0.29838853310505553,
+            "connected_SzSz_midbond": -0.06274262477284394,
+            "entanglement_entropy_midbond": 0.0,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 16,
+            "initial_energy": -0.09897173898269877,
+            "final_energy": -25.50821563872256,
+            "energy_per_site": -0.318852695484032,
+            "energy_history": [
+              -0.09897173898269877,
+              -1.0964070499346699,
+              -14.579996896153249,
+              -25.50821563872256
+            ],
+            "grad_norm_history": [
+              0.0,
+              1.0731224405881037,
+              21.150675234841415,
+              26.072579633304024
+            ],
+            "max_bond": 16,
+            "local_Sz_mid": -0.11054650560531136,
+            "connected_SzSz_midbond": -0.08662050238617487,
+            "entanglement_entropy_midbond": 0.0,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          },
+          {
+            "chi": 32,
+            "initial_energy": -0.035366668245999905,
+            "final_energy": -29.696850386497413,
+            "energy_per_site": -0.37121062983121766,
+            "energy_history": [
+              -0.035366668245999905,
+              -1.1802376773543968,
+              -21.453975883934607,
+              -29.696850386497413
+            ],
+            "grad_norm_history": [
+              0.0,
+              0.8696767574324196,
+              24.56939912223251,
+              28.01646394840994
+            ],
+            "max_bond": 32,
+            "local_Sz_mid": -0.14929541007291544,
+            "connected_SzSz_midbond": -0.09007762372156443,
+            "entanglement_entropy_midbond": 0.0,
+            "ed_used": false,
+            "classical_dmrg_used": false,
+            "lanczos_used": false,
+            "dense_hamiltonian_built": false
+          }
+        ],
+        "energy_decreases_each_chi": true,
+        "higher_chi_energy_not_worse": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "energy_decreases_each_chi": true,
+        "higher_chi_energy_not_worse": true,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 5.57198919984512,
+      "notes": "CPU-small chi table only. This strengthens large-N convergence evidence but does not replace the requested full N=40/80 production runs."
+    },
+    {
+      "case_id": "large_n_ad_spinless_tv_N20_chi8_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "spinless_tv",
+      "parameters": {
+        "t": 1.0,
+        "V": 0.5,
+        "mu": 0.0,
+        "mode": "hard",
+        "target_n": 10,
+        "chi": 8,
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_n": 10
+      },
+      "N": 20,
+      "chi": 0,
+      "method": "large-N hard-sector AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -2.378070496057698,
+      "energy_per_site": -0.11890352480288491,
+      "observables": {
+        "final_energy": -2.378070496057698,
+        "energy_history": [
+          -2.378070496057698
+        ],
+        "sector": {
+          "n": 9.999999999999995,
+          "n_target": 10,
+          "abs_error": 5.329070518200751e-15,
+          "variance": 4.263256414560601e-14
+        },
+        "additive_observables": {
+          "n": 9.999999999999995,
+          "n_target": 10,
+          "abs_error": 5.329070518200751e-15,
+          "variance": 4.263256414560601e-14
+        },
+        "local_density_mid": 0.9999999506427084,
+        "double_occupancy_mid": null,
+        "local_sz_mid": null,
+        "diagnostics": {
+          "ed_used": false,
+          "classical_dmrg_used": false,
+          "lanczos_used": false,
+          "ad_used": true,
+          "dense_hamiltonian_built": false,
+          "sector_mode": "hard",
+          "max_forbidden_abs": 0.0,
+          "max_forbidden_grad_abs": 0.0
+        },
+        "gradient_norm": 0.08529051906037541,
+        "max_bond": 8
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond": 8,
+        "local_density_range": "spinless [0,1], Hubbard [0,2]",
+        "hubbard_double_occupancy_range": "[0,1]",
+        "hubbard_sz_range": "[-0.5,0.5]"
+      },
+      "runtime_sec": 0.1888806999195367,
+      "notes": "Hard-sector AD smoke only; no ED, no classical DMRG, no Lanczos, no dense Hamiltonian construction, and local observables are contracted from the final MPS."
+    },
+    {
+      "case_id": "large_n_ad_hubbard_N10_chi8_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "hubbard",
+      "parameters": {
+        "t": 1.0,
+        "U": 4.0,
+        "mu": 0.0,
+        "h": 0.0,
+        "mode": "hard",
+        "target_nup": 5,
+        "target_ndown": 5,
+        "chi": 8,
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_nup": 5,
+        "target_ndown": 5
+      },
+      "N": 10,
+      "chi": 0,
+      "method": "large-N hard-sector AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -10.003195782141864,
+      "energy_per_site": -1.0003195782141865,
+      "observables": {
+        "final_energy": -10.003195782141864,
+        "energy_history": [
+          -10.003195782141864
+        ],
+        "sector": {
+          "n_up": 4.999999999999999,
+          "n_up_target": 5,
+          "n_up_abs_error": 8.881784197001252e-16,
+          "n_down": 5.0,
+          "n_down_target": 5,
+          "n_down_abs_error": 0.0,
+          "n_tot": 10.000000000000002,
+          "sz": 0.0,
+          "variance_n_up": 1.4210854715202004e-14,
+          "variance_n_down": 0.0,
+          "variance_n_tot": 0.0
+        },
+        "additive_observables": {
+          "n_up": 4.999999999999999,
+          "n_up_target": 5,
+          "n_up_abs_error": 8.881784197001252e-16,
+          "n_down": 5.0,
+          "n_down_target": 5,
+          "n_down_abs_error": 0.0,
+          "n_tot": 10.000000000000002,
+          "sz": 0.0,
+          "variance_n_up": 1.4210854715202004e-14,
+          "variance_n_down": 0.0,
+          "variance_n_tot": 0.0
+        },
+        "local_density_mid": 0.9999999730247334,
+        "double_occupancy_mid": 7.605210041904824e-09,
+        "local_sz_mid": -0.4999999768729084,
+        "diagnostics": {
+          "ed_used": false,
+          "classical_dmrg_used": false,
+          "lanczos_used": false,
+          "ad_used": true,
+          "dense_hamiltonian_built": false,
+          "sector_mode": "hard",
+          "max_forbidden_abs": 0.0,
+          "max_forbidden_grad_abs": 0.0
+        },
+        "gradient_norm": 0.08424939493606423,
+        "max_bond": 8
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond": 8,
+        "local_density_range": "spinless [0,1], Hubbard [0,2]",
+        "hubbard_double_occupancy_range": "[0,1]",
+        "hubbard_sz_range": "[-0.5,0.5]"
+      },
+      "runtime_sec": 0.22284139995463192,
+      "notes": "Hard-sector AD smoke only; no ED, no classical DMRG, no Lanczos, no dense Hamiltonian construction, and local observables are contracted from the final MPS."
+    },
+    {
+      "case_id": "large_n_ad_spinless_tv_N40_chi8_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "spinless_tv",
+      "parameters": {
+        "t": 1.0,
+        "V": 0.5,
+        "mu": 0.0,
+        "mode": "hard",
+        "target_n": 20,
+        "chi": 8,
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_n": 20
+      },
+      "N": 40,
+      "chi": 0,
+      "method": "large-N hard-sector AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -4.8837190124480445,
+      "energy_per_site": -0.12209297531120111,
+      "observables": {
+        "final_energy": -4.8837190124480445,
+        "energy_history": [
+          -4.8837190124480445
+        ],
+        "sector": {
+          "n": 20.0,
+          "n_target": 20,
+          "abs_error": 0.0,
+          "variance": 0.0
+        },
+        "additive_observables": {
+          "n": 20.0,
+          "n_target": 20,
+          "abs_error": 0.0,
+          "variance": 0.0
+        },
+        "local_density_mid": 0.9999999480743836,
+        "double_occupancy_mid": null,
+        "local_sz_mid": null,
+        "diagnostics": {
+          "ed_used": false,
+          "classical_dmrg_used": false,
+          "lanczos_used": false,
+          "ad_used": true,
+          "dense_hamiltonian_built": false,
+          "sector_mode": "hard",
+          "max_forbidden_abs": 0.0,
+          "max_forbidden_grad_abs": 0.0
+        },
+        "gradient_norm": 0.13095549280661856,
+        "max_bond": 8
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond": 8,
+        "local_density_range": "spinless [0,1], Hubbard [0,2]",
+        "hubbard_double_occupancy_range": "[0,1]",
+        "hubbard_sz_range": "[-0.5,0.5]"
+      },
+      "runtime_sec": 0.3874925000127405,
+      "notes": "Hard-sector AD smoke only; no ED, no classical DMRG, no Lanczos, no dense Hamiltonian construction, and local observables are contracted from the final MPS."
+    },
+    {
+      "case_id": "large_n_ad_spinless_tv_N80_chi8_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "spinless_tv",
+      "parameters": {
+        "t": 1.0,
+        "V": 0.5,
+        "mu": 0.0,
+        "mode": "hard",
+        "target_n": 40,
+        "chi": 8,
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_n": 40
+      },
+      "N": 80,
+      "chi": 0,
+      "method": "large-N hard-sector AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -9.890764367755185,
+      "energy_per_site": -0.12363455459693981,
+      "observables": {
+        "final_energy": -9.890764367755185,
+        "energy_history": [
+          -9.890764367755185
+        ],
+        "sector": {
+          "n": 40.00000000000002,
+          "n_target": 40,
+          "abs_error": 2.1316282072803006e-14,
+          "variance": 0.0
+        },
+        "additive_observables": {
+          "n": 40.00000000000002,
+          "n_target": 40,
+          "abs_error": 2.1316282072803006e-14,
+          "variance": 0.0
+        },
+        "local_density_mid": 0.9999999399732036,
+        "double_occupancy_mid": null,
+        "local_sz_mid": null,
+        "diagnostics": {
+          "ed_used": false,
+          "classical_dmrg_used": false,
+          "lanczos_used": false,
+          "ad_used": true,
+          "dense_hamiltonian_built": false,
+          "sector_mode": "hard",
+          "max_forbidden_abs": 0.0,
+          "max_forbidden_grad_abs": 0.0
+        },
+        "gradient_norm": 0.18121037401374773,
+        "max_bond": 8
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond": 8,
+        "local_density_range": "spinless [0,1], Hubbard [0,2]",
+        "hubbard_double_occupancy_range": "[0,1]",
+        "hubbard_sz_range": "[-0.5,0.5]"
+      },
+      "runtime_sec": 0.7654836000874639,
+      "notes": "Hard-sector AD smoke only; no ED, no classical DMRG, no Lanczos, no dense Hamiltonian construction, and local observables are contracted from the final MPS."
+    },
+    {
+      "case_id": "large_n_ad_hubbard_N20_chi8_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "hubbard",
+      "parameters": {
+        "t": 1.0,
+        "U": 4.0,
+        "mu": 0.0,
+        "h": 0.0,
+        "mode": "hard",
+        "target_nup": 10,
+        "target_ndown": 10,
+        "chi": 8,
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_nup": 10,
+        "target_ndown": 10
+      },
+      "N": 20,
+      "chi": 0,
+      "method": "large-N hard-sector AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -20.006574978495866,
+      "energy_per_site": -1.0003287489247934,
+      "observables": {
+        "final_energy": -20.006574978495866,
+        "energy_history": [
+          -20.006574978495866
+        ],
+        "sector": {
+          "n_up": 10.0,
+          "n_up_target": 10,
+          "n_up_abs_error": 0.0,
+          "n_down": 10.0,
+          "n_down_target": 10,
+          "n_down_abs_error": 0.0,
+          "n_tot": 20.0,
+          "sz": 0.0,
+          "variance_n_up": 0.0,
+          "variance_n_down": 0.0,
+          "variance_n_tot": 0.0
+        },
+        "additive_observables": {
+          "n_up": 10.0,
+          "n_up_target": 10,
+          "n_up_abs_error": 0.0,
+          "n_down": 10.0,
+          "n_down_target": 10,
+          "n_down_abs_error": 0.0,
+          "n_tot": 20.0,
+          "sz": 0.0,
+          "variance_n_up": 0.0,
+          "variance_n_down": 0.0,
+          "variance_n_tot": 0.0
+        },
+        "local_density_mid": 1.000000000436336,
+        "double_occupancy_mid": 7.938563761724364e-09,
+        "local_sz_mid": 0.4999999917438541,
+        "diagnostics": {
+          "ed_used": false,
+          "classical_dmrg_used": false,
+          "lanczos_used": false,
+          "ad_used": true,
+          "dense_hamiltonian_built": false,
+          "sector_mode": "hard",
+          "max_forbidden_abs": 0.0,
+          "max_forbidden_grad_abs": 0.0
+        },
+        "gradient_norm": 0.12314041414362875,
+        "max_bond": 8
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond": 8,
+        "local_density_range": "spinless [0,1], Hubbard [0,2]",
+        "hubbard_double_occupancy_range": "[0,1]",
+        "hubbard_sz_range": "[-0.5,0.5]"
+      },
+      "runtime_sec": 0.47443930013105273,
+      "notes": "Hard-sector AD smoke only; no ED, no classical DMRG, no Lanczos, no dense Hamiltonian construction, and local observables are contracted from the final MPS."
+    },
+    {
+      "case_id": "large_n_ad_hubbard_N40_chi8_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "hubbard",
+      "parameters": {
+        "t": 1.0,
+        "U": 4.0,
+        "mu": 0.0,
+        "h": 0.0,
+        "mode": "hard",
+        "target_nup": 20,
+        "target_ndown": 20,
+        "chi": 8,
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_nup": 20,
+        "target_ndown": 20
+      },
+      "N": 40,
+      "chi": 0,
+      "method": "large-N hard-sector AD-only smoke",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -40.01604696174828,
+      "energy_per_site": -1.000401174043707,
+      "observables": {
+        "final_energy": -40.01604696174828,
+        "energy_history": [
+          -40.01604696174828
+        ],
+        "sector": {
+          "n_up": 19.999999999999996,
+          "n_up_target": 20,
+          "n_up_abs_error": 3.552713678800501e-15,
+          "n_down": 19.999999999999996,
+          "n_down_target": 20,
+          "n_down_abs_error": 3.552713678800501e-15,
+          "n_tot": 39.999999999999964,
+          "sz": 0.0,
+          "variance_n_up": 0.0,
+          "variance_n_down": 0.0,
+          "variance_n_tot": 4.547473508864641e-13
+        },
+        "additive_observables": {
+          "n_up": 19.999999999999996,
+          "n_up_target": 20,
+          "n_up_abs_error": 3.552713678800501e-15,
+          "n_down": 19.999999999999996,
+          "n_down_target": 20,
+          "n_down_abs_error": 3.552713678800501e-15,
+          "n_tot": 39.999999999999964,
+          "sz": 0.0,
+          "variance_n_up": 0.0,
+          "variance_n_down": 0.0,
+          "variance_n_tot": 4.547473508864641e-13
+        },
+        "local_density_mid": 0.9999999804780064,
+        "double_occupancy_mid": 3.6724629845826875e-08,
+        "local_sz_mid": 0.49999995074569953,
+        "diagnostics": {
+          "ed_used": false,
+          "classical_dmrg_used": false,
+          "lanczos_used": false,
+          "ad_used": true,
+          "dense_hamiltonian_built": false,
+          "sector_mode": "hard",
+          "max_forbidden_abs": 0.0,
+          "max_forbidden_grad_abs": 0.0
+        },
+        "gradient_norm": 0.18069579676620878,
+        "max_bond": 8
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond": 8,
+        "local_density_range": "spinless [0,1], Hubbard [0,2]",
+        "hubbard_double_occupancy_range": "[0,1]",
+        "hubbard_sz_range": "[-0.5,0.5]"
+      },
+      "runtime_sec": 0.9685986000113189,
+      "notes": "Hard-sector AD smoke only; no ED, no classical DMRG, no Lanczos, no dense Hamiltonian construction, and local observables are contracted from the final MPS."
+    },
+    {
+      "case_id": "large_n_chi_table_spinless_tv_N20_chi4_8_16_32_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "spinless_tv",
+      "parameters": {
+        "t": 1.0,
+        "V": 0.5,
+        "mu": 0.0,
+        "mode": "hard",
+        "target_n": 10,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_n": 10
+      },
+      "N": 20,
+      "chi": 0,
+      "method": "resource-bounded large-N hard-sector AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -2.3788200909826123,
+      "energy_per_site": -0.11894100454913062,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "final_energy": -2.3785951159184306,
+            "energy_per_site": -0.11892975579592154,
+            "energy_history": [
+              -2.3785951159184306
+            ],
+            "sector": {
+              "n": 10.000000000000004,
+              "n_target": 10,
+              "abs_error": 3.552713678800501e-15,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 10.000000000000004,
+              "n_target": 10,
+              "abs_error": 3.552713678800501e-15,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999914180622,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.08704099179261615,
+            "max_bond": 4
+          },
+          {
+            "chi": 8,
+            "final_energy": -2.378070496057698,
+            "energy_per_site": -0.11890352480288491,
+            "energy_history": [
+              -2.378070496057698
+            ],
+            "sector": {
+              "n": 9.999999999999995,
+              "n_target": 10,
+              "abs_error": 5.329070518200751e-15,
+              "variance": 4.263256414560601e-14
+            },
+            "additive_observables": {
+              "n": 9.999999999999995,
+              "n_target": 10,
+              "abs_error": 5.329070518200751e-15,
+              "variance": 4.263256414560601e-14
+            },
+            "local_density_mid": 0.9999999506427084,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.08529051906037541,
+            "max_bond": 8
+          },
+          {
+            "chi": 16,
+            "final_energy": -2.3788200909826123,
+            "energy_per_site": -0.11894100454913062,
+            "energy_history": [
+              -2.3788200909826123
+            ],
+            "sector": {
+              "n": 10.000000000000002,
+              "n_target": 10,
+              "abs_error": 1.7763568394002505e-15,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 10.000000000000002,
+              "n_target": 10,
+              "abs_error": 1.7763568394002505e-15,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999259580256,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.08994109465577758,
+            "max_bond": 11
+          },
+          {
+            "chi": 32,
+            "final_energy": -2.3788200909826123,
+            "energy_per_site": -0.11894100454913062,
+            "energy_history": [
+              -2.3788200909826123
+            ],
+            "sector": {
+              "n": 10.000000000000002,
+              "n_target": 10,
+              "abs_error": 1.7763568394002505e-15,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 10.000000000000002,
+              "n_target": 10,
+              "abs_error": 1.7763568394002505e-15,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999259580256,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.08994109465577758,
+            "max_bond": 11
+          }
+        ],
+        "sector_clean_each_chi": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 0.7680470000486821,
+      "notes": "CPU-small hard-sector chi table only. This checks finite energies, sector preservation, and large-N policy flags but does not assert monotonic convergence."
+    },
+    {
+      "case_id": "large_n_chi_table_hubbard_N10_chi4_8_16_32_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "hubbard",
+      "parameters": {
+        "t": 1.0,
+        "U": 4.0,
+        "mu": 0.0,
+        "h": 0.0,
+        "mode": "hard",
+        "target_nup": 5,
+        "target_ndown": 5,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_nup": 5,
+        "target_ndown": 5
+      },
+      "N": 10,
+      "chi": 0,
+      "method": "resource-bounded large-N hard-sector AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -10.004880899403602,
+      "energy_per_site": -1.0004880899403603,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "final_energy": -10.001783665759834,
+            "energy_per_site": -1.0001783665759834,
+            "energy_history": [
+              -10.001783665759834
+            ],
+            "sector": {
+              "n_up": 4.999999999999999,
+              "n_up_target": 5,
+              "n_up_abs_error": 8.881784197001252e-16,
+              "n_down": 5.000000000000001,
+              "n_down_target": 5,
+              "n_down_abs_error": 8.881784197001252e-16,
+              "n_tot": 10.000000000000004,
+              "sz": 0.0,
+              "variance_n_up": 7.105427357601002e-15,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "additive_observables": {
+              "n_up": 4.999999999999999,
+              "n_up_target": 5,
+              "n_up_abs_error": 8.881784197001252e-16,
+              "n_down": 5.000000000000001,
+              "n_down_target": 5,
+              "n_down_abs_error": 8.881784197001252e-16,
+              "n_tot": 10.000000000000004,
+              "sz": 0.0,
+              "variance_n_up": 7.105427357601002e-15,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "local_density_mid": 0.9999999915215082,
+            "double_occupancy_mid": 7.872900202105304e-09,
+            "local_sz_mid": -0.4999999877632972,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.07288544515167146,
+            "max_bond": 4
+          },
+          {
+            "chi": 8,
+            "final_energy": -10.003195782141864,
+            "energy_per_site": -1.0003195782141865,
+            "energy_history": [
+              -10.003195782141864
+            ],
+            "sector": {
+              "n_up": 4.999999999999999,
+              "n_up_target": 5,
+              "n_up_abs_error": 8.881784197001252e-16,
+              "n_down": 5.0,
+              "n_down_target": 5,
+              "n_down_abs_error": 0.0,
+              "n_tot": 10.000000000000002,
+              "sz": 0.0,
+              "variance_n_up": 1.4210854715202004e-14,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "additive_observables": {
+              "n_up": 4.999999999999999,
+              "n_up_target": 5,
+              "n_up_abs_error": 8.881784197001252e-16,
+              "n_down": 5.0,
+              "n_down_target": 5,
+              "n_down_abs_error": 0.0,
+              "n_tot": 10.000000000000002,
+              "sz": 0.0,
+              "variance_n_up": 1.4210854715202004e-14,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "local_density_mid": 0.9999999730247334,
+            "double_occupancy_mid": 7.605210041904824e-09,
+            "local_sz_mid": -0.4999999768729084,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.08424939493606423,
+            "max_bond": 8
+          },
+          {
+            "chi": 16,
+            "final_energy": -10.004480468550042,
+            "energy_per_site": -1.0004480468550043,
+            "energy_history": [
+              -10.004480468550042
+            ],
+            "sector": {
+              "n_up": 5.0,
+              "n_up_target": 5,
+              "n_up_abs_error": 0.0,
+              "n_down": 5.000000000000002,
+              "n_down_target": 5,
+              "n_down_abs_error": 1.7763568394002505e-15,
+              "n_tot": 9.999999999999998,
+              "sz": 0.0,
+              "variance_n_up": 3.552713678800501e-15,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 4.263256414560601e-14
+            },
+            "additive_observables": {
+              "n_up": 5.0,
+              "n_up_target": 5,
+              "n_up_abs_error": 0.0,
+              "n_down": 5.000000000000002,
+              "n_down_target": 5,
+              "n_down_abs_error": 1.7763568394002505e-15,
+              "n_tot": 9.999999999999998,
+              "sz": 0.0,
+              "variance_n_up": 3.552713678800501e-15,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 4.263256414560601e-14
+            },
+            "local_density_mid": 1.0000000155430555,
+            "double_occupancy_mid": 6.40248205189125e-08,
+            "local_sz_mid": -0.4999999414927792,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.09083396678292809,
+            "max_bond": 16
+          },
+          {
+            "chi": 32,
+            "final_energy": -10.004880899403602,
+            "energy_per_site": -1.0004880899403603,
+            "energy_history": [
+              -10.004880899403602
+            ],
+            "sector": {
+              "n_up": 5.000000000000001,
+              "n_up_target": 5,
+              "n_up_abs_error": 8.881784197001252e-16,
+              "n_down": 4.999999999999999,
+              "n_down_target": 5,
+              "n_down_abs_error": 8.881784197001252e-16,
+              "n_tot": 10.0,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 1.4210854715202004e-14,
+              "variance_n_tot": 7.105427357601002e-14
+            },
+            "additive_observables": {
+              "n_up": 5.000000000000001,
+              "n_up_target": 5,
+              "n_up_abs_error": 8.881784197001252e-16,
+              "n_down": 4.999999999999999,
+              "n_down_target": 5,
+              "n_down_abs_error": 8.881784197001252e-16,
+              "n_tot": 10.0,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 1.4210854715202004e-14,
+              "variance_n_tot": 7.105427357601002e-14
+            },
+            "local_density_mid": 0.999999963613405,
+            "double_occupancy_mid": 2.4419998943358284e-08,
+            "local_sz_mid": -0.4999999517920927,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.09174525982247853,
+            "max_bond": 32
+          }
+        ],
+        "sector_clean_each_chi": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 0.9510264999698848,
+      "notes": "CPU-small hard-sector chi table only. This checks finite energies, sector preservation, and large-N policy flags but does not assert monotonic convergence."
+    },
+    {
+      "case_id": "large_n_chi_table_spinless_tv_N40_chi4_8_16_32_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "spinless_tv",
+      "parameters": {
+        "t": 1.0,
+        "V": 0.5,
+        "mu": 0.0,
+        "mode": "hard",
+        "target_n": 20,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_n": 20
+      },
+      "N": 40,
+      "chi": 0,
+      "method": "resource-bounded large-N hard-sector AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -4.882749713750205,
+      "energy_per_site": -0.12206874284375513,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "final_energy": -4.8828830861515575,
+            "energy_per_site": -0.12207207715378894,
+            "energy_history": [
+              -4.8828830861515575
+            ],
+            "sector": {
+              "n": 19.999999999999982,
+              "n_target": 20,
+              "abs_error": 1.7763568394002505e-14,
+              "variance": 4.547473508864641e-13
+            },
+            "additive_observables": {
+              "n": 19.999999999999982,
+              "n_target": 20,
+              "abs_error": 1.7763568394002505e-14,
+              "variance": 4.547473508864641e-13
+            },
+            "local_density_mid": 0.999999978948199,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.1265402501898065,
+            "max_bond": 4
+          },
+          {
+            "chi": 8,
+            "final_energy": -4.8837190124480445,
+            "energy_per_site": -0.12209297531120111,
+            "energy_history": [
+              -4.8837190124480445
+            ],
+            "sector": {
+              "n": 20.0,
+              "n_target": 20,
+              "abs_error": 0.0,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 20.0,
+              "n_target": 20,
+              "abs_error": 0.0,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999480743836,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.13095549280661856,
+            "max_bond": 8
+          },
+          {
+            "chi": 16,
+            "final_energy": -4.882119824478741,
+            "energy_per_site": -0.12205299561196851,
+            "energy_history": [
+              -4.882119824478741
+            ],
+            "sector": {
+              "n": 20.0,
+              "n_target": 20,
+              "abs_error": 0.0,
+              "variance": 5.684341886080802e-14
+            },
+            "additive_observables": {
+              "n": 20.0,
+              "n_target": 20,
+              "abs_error": 0.0,
+              "variance": 5.684341886080802e-14
+            },
+            "local_density_mid": 0.999999960723225,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.12569030779307178,
+            "max_bond": 16
+          },
+          {
+            "chi": 32,
+            "final_energy": -4.882749713750205,
+            "energy_per_site": -0.12206874284375513,
+            "energy_history": [
+              -4.882749713750205
+            ],
+            "sector": {
+              "n": 19.999999999999996,
+              "n_target": 20,
+              "abs_error": 3.552713678800501e-15,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 19.999999999999996,
+              "n_target": 20,
+              "abs_error": 3.552713678800501e-15,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999811870635,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.12678846860015883,
+            "max_bond": 21
+          }
+        ],
+        "sector_clean_each_chi": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 1.6835031998343766,
+      "notes": "CPU-small hard-sector chi table only. This checks finite energies, sector preservation, and large-N policy flags but does not assert monotonic convergence."
+    },
+    {
+      "case_id": "large_n_chi_table_spinless_tv_N80_chi4_8_16_32_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "spinless_tv",
+      "parameters": {
+        "t": 1.0,
+        "V": 0.5,
+        "mu": 0.0,
+        "mode": "hard",
+        "target_n": 40,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_n": 40
+      },
+      "N": 80,
+      "chi": 0,
+      "method": "resource-bounded large-N hard-sector AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -9.89069647989995,
+      "energy_per_site": -0.12363370599874937,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "final_energy": -9.889167500460633,
+            "energy_per_site": -0.12361459375575792,
+            "energy_history": [
+              -9.889167500460633
+            ],
+            "sector": {
+              "n": 40.0,
+              "n_target": 40,
+              "abs_error": 0.0,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 40.0,
+              "n_target": 40,
+              "abs_error": 0.0,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999520084423,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.17793279079343863,
+            "max_bond": 4
+          },
+          {
+            "chi": 8,
+            "final_energy": -9.890764367755185,
+            "energy_per_site": -0.12363455459693981,
+            "energy_history": [
+              -9.890764367755185
+            ],
+            "sector": {
+              "n": 40.00000000000002,
+              "n_target": 40,
+              "abs_error": 2.1316282072803006e-14,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 40.00000000000002,
+              "n_target": 40,
+              "abs_error": 2.1316282072803006e-14,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999399732036,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.18121037401374773,
+            "max_bond": 8
+          },
+          {
+            "chi": 16,
+            "final_energy": -9.89241583481729,
+            "energy_per_site": -0.12365519793521614,
+            "energy_history": [
+              -9.89241583481729
+            ],
+            "sector": {
+              "n": 40.00000000000001,
+              "n_target": 40,
+              "abs_error": 7.105427357601002e-15,
+              "variance": 6.821210263296962e-13
+            },
+            "additive_observables": {
+              "n": 40.00000000000001,
+              "n_target": 40,
+              "abs_error": 7.105427357601002e-15,
+              "variance": 6.821210263296962e-13
+            },
+            "local_density_mid": 0.9999999524611666,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.18559785249851954,
+            "max_bond": 16
+          },
+          {
+            "chi": 32,
+            "final_energy": -9.89069647989995,
+            "energy_per_site": -0.12363370599874937,
+            "energy_history": [
+              -9.89069647989995
+            ],
+            "sector": {
+              "n": 40.0,
+              "n_target": 40,
+              "abs_error": 0.0,
+              "variance": 0.0
+            },
+            "additive_observables": {
+              "n": 40.0,
+              "n_target": 40,
+              "abs_error": 0.0,
+              "variance": 0.0
+            },
+            "local_density_mid": 0.9999999830228252,
+            "double_occupancy_mid": null,
+            "local_sz_mid": null,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.18205178451259288,
+            "max_bond": 32
+          }
+        ],
+        "sector_clean_each_chi": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 3.748959300108254,
+      "notes": "CPU-small hard-sector chi table only. This checks finite energies, sector preservation, and large-N policy flags but does not assert monotonic convergence."
+    },
+    {
+      "case_id": "large_n_chi_table_hubbard_N20_chi4_8_16_32_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "hubbard",
+      "parameters": {
+        "t": 1.0,
+        "U": 4.0,
+        "mu": 0.0,
+        "h": 0.0,
+        "mode": "hard",
+        "target_nup": 10,
+        "target_ndown": 10,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_nup": 10,
+        "target_ndown": 10
+      },
+      "N": 20,
+      "chi": 0,
+      "method": "resource-bounded large-N hard-sector AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -20.007618872478727,
+      "energy_per_site": -1.0003809436239364,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "final_energy": -20.004977760645232,
+            "energy_per_site": -1.0002488880322615,
+            "energy_history": [
+              -20.004977760645232
+            ],
+            "sector": {
+              "n_up": 9.999999999999998,
+              "n_up_target": 10,
+              "n_up_abs_error": 1.7763568394002505e-15,
+              "n_down": 10.0,
+              "n_down_target": 10,
+              "n_down_abs_error": 0.0,
+              "n_tot": 20.0,
+              "sz": 0.0,
+              "variance_n_up": 4.263256414560601e-14,
+              "variance_n_down": 2.842170943040401e-14,
+              "variance_n_tot": 1.1368683772161603e-13
+            },
+            "additive_observables": {
+              "n_up": 9.999999999999998,
+              "n_up_target": 10,
+              "n_up_abs_error": 1.7763568394002505e-15,
+              "n_down": 10.0,
+              "n_down_target": 10,
+              "n_down_abs_error": 0.0,
+              "n_tot": 20.0,
+              "sz": 0.0,
+              "variance_n_up": 4.263256414560601e-14,
+              "variance_n_down": 2.842170943040401e-14,
+              "variance_n_tot": 1.1368683772161603e-13
+            },
+            "local_density_mid": 0.9999999560099335,
+            "double_occupancy_mid": 8.53199173740507e-09,
+            "local_sz_mid": 0.4999999661521198,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.1084182307179886,
+            "max_bond": 4
+          },
+          {
+            "chi": 8,
+            "final_energy": -20.006574978495866,
+            "energy_per_site": -1.0003287489247934,
+            "energy_history": [
+              -20.006574978495866
+            ],
+            "sector": {
+              "n_up": 10.0,
+              "n_up_target": 10,
+              "n_up_abs_error": 0.0,
+              "n_down": 10.0,
+              "n_down_target": 10,
+              "n_down_abs_error": 0.0,
+              "n_tot": 20.0,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "additive_observables": {
+              "n_up": 10.0,
+              "n_up_target": 10,
+              "n_up_abs_error": 0.0,
+              "n_down": 10.0,
+              "n_down_target": 10,
+              "n_down_abs_error": 0.0,
+              "n_tot": 20.0,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "local_density_mid": 1.000000000436336,
+            "double_occupancy_mid": 7.938563761724364e-09,
+            "local_sz_mid": 0.4999999917438541,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.12314041414362875,
+            "max_bond": 8
+          },
+          {
+            "chi": 16,
+            "final_energy": -20.00730279949666,
+            "energy_per_site": -1.000365139974833,
+            "energy_history": [
+              -20.00730279949666
+            ],
+            "sector": {
+              "n_up": 10.000000000000002,
+              "n_up_target": 10,
+              "n_up_abs_error": 1.7763568394002505e-15,
+              "n_down": 10.000000000000002,
+              "n_down_target": 10,
+              "n_down_abs_error": 1.7763568394002505e-15,
+              "n_tot": 20.00000000000001,
+              "sz": 0.0,
+              "variance_n_up": 2.842170943040401e-14,
+              "variance_n_down": 4.263256414560601e-14,
+              "variance_n_tot": 0.0
+            },
+            "additive_observables": {
+              "n_up": 10.000000000000002,
+              "n_up_target": 10,
+              "n_up_abs_error": 1.7763568394002505e-15,
+              "n_down": 10.000000000000002,
+              "n_down_target": 10,
+              "n_down_abs_error": 1.7763568394002505e-15,
+              "n_tot": 20.00000000000001,
+              "sz": 0.0,
+              "variance_n_up": 2.842170943040401e-14,
+              "variance_n_down": 4.263256414560601e-14,
+              "variance_n_tot": 0.0
+            },
+            "local_density_mid": 0.9999999521207946,
+            "double_occupancy_mid": 1.0323951402069017e-08,
+            "local_sz_mid": 0.49999996385150064,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.1259162124008509,
+            "max_bond": 16
+          },
+          {
+            "chi": 32,
+            "final_energy": -20.007618872478727,
+            "energy_per_site": -1.0003809436239364,
+            "energy_history": [
+              -20.007618872478727
+            ],
+            "sector": {
+              "n_up": 9.999999999999995,
+              "n_up_target": 10,
+              "n_up_abs_error": 5.329070518200751e-15,
+              "n_down": 9.999999999999996,
+              "n_down_target": 10,
+              "n_down_abs_error": 3.552713678800501e-15,
+              "n_tot": 19.999999999999986,
+              "sz": 0.0,
+              "variance_n_up": 2.842170943040401e-14,
+              "variance_n_down": 5.684341886080802e-14,
+              "variance_n_tot": 5.684341886080801e-13
+            },
+            "additive_observables": {
+              "n_up": 9.999999999999995,
+              "n_up_target": 10,
+              "n_up_abs_error": 5.329070518200751e-15,
+              "n_down": 9.999999999999996,
+              "n_down_target": 10,
+              "n_down_abs_error": 3.552713678800501e-15,
+              "n_tot": 19.999999999999986,
+              "sz": 0.0,
+              "variance_n_up": 2.842170943040401e-14,
+              "variance_n_down": 5.684341886080802e-14,
+              "variance_n_tot": 5.684341886080801e-13
+            },
+            "local_density_mid": 0.9999999976251982,
+            "double_occupancy_mid": 6.578110083446766e-09,
+            "local_sz_mid": 0.49999999191185696,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.12666324009065766,
+            "max_bond": 32
+          }
+        ],
+        "sector_clean_each_chi": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 2.1526155001483858,
+      "notes": "CPU-small hard-sector chi table only. This checks finite energies, sector preservation, and large-N policy flags but does not assert monotonic convergence."
+    },
+    {
+      "case_id": "large_n_chi_table_hubbard_N40_chi4_8_16_32_hard_sector_no_reference",
+      "suite": "large_n_ad",
+      "model": "hubbard",
+      "parameters": {
+        "t": 1.0,
+        "U": 4.0,
+        "mu": 0.0,
+        "h": 0.0,
+        "mode": "hard",
+        "target_nup": 20,
+        "target_ndown": 20,
+        "chi_values": [
+          4,
+          8,
+          16,
+          32
+        ],
+        "sweeps": 1,
+        "local_steps": 2,
+        "lr": 0.005,
+        "seed": 0
+      },
+      "sector": {
+        "target_nup": 20,
+        "target_ndown": 20
+      },
+      "N": 40,
+      "chi": 0,
+      "method": "resource-bounded large-N hard-sector AD chi table",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": -40.013339965588266,
+      "energy_per_site": -1.0003334991397066,
+      "observables": {
+        "chi_table": [
+          {
+            "chi": 4,
+            "final_energy": -40.01193472496979,
+            "energy_per_site": -1.0002983681242448,
+            "energy_history": [
+              -40.01193472496979
+            ],
+            "sector": {
+              "n_up": 20.000000000000014,
+              "n_up_target": 20,
+              "n_up_abs_error": 1.4210854715202004e-14,
+              "n_down": 20.000000000000014,
+              "n_down_target": 20,
+              "n_down_abs_error": 1.4210854715202004e-14,
+              "n_tot": 40.0,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 4.547473508864641e-13
+            },
+            "additive_observables": {
+              "n_up": 20.000000000000014,
+              "n_up_target": 20,
+              "n_up_abs_error": 1.4210854715202004e-14,
+              "n_down": 20.000000000000014,
+              "n_down_target": 20,
+              "n_down_abs_error": 1.4210854715202004e-14,
+              "n_tot": 40.0,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 4.547473508864641e-13
+            },
+            "local_density_mid": 1.000000014387341,
+            "double_occupancy_mid": 4.530860123507458e-08,
+            "local_sz_mid": 0.49999996137972635,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.1561009702535243,
+            "max_bond": 4
+          },
+          {
+            "chi": 8,
+            "final_energy": -40.01604696174828,
+            "energy_per_site": -1.000401174043707,
+            "energy_history": [
+              -40.01604696174828
+            ],
+            "sector": {
+              "n_up": 19.999999999999996,
+              "n_up_target": 20,
+              "n_up_abs_error": 3.552713678800501e-15,
+              "n_down": 19.999999999999996,
+              "n_down_target": 20,
+              "n_down_abs_error": 3.552713678800501e-15,
+              "n_tot": 39.999999999999964,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 4.547473508864641e-13
+            },
+            "additive_observables": {
+              "n_up": 19.999999999999996,
+              "n_up_target": 20,
+              "n_up_abs_error": 3.552713678800501e-15,
+              "n_down": 19.999999999999996,
+              "n_down_target": 20,
+              "n_down_abs_error": 3.552713678800501e-15,
+              "n_tot": 39.999999999999964,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 4.547473508864641e-13
+            },
+            "local_density_mid": 0.9999999804780064,
+            "double_occupancy_mid": 3.6724629845826875e-08,
+            "local_sz_mid": 0.49999995074569953,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.18069579676620878,
+            "max_bond": 8
+          },
+          {
+            "chi": 16,
+            "final_energy": -40.01275109853616,
+            "energy_per_site": -1.000318777463404,
+            "energy_history": [
+              -40.01275109853616
+            ],
+            "sector": {
+              "n_up": 19.999999999999993,
+              "n_up_target": 20,
+              "n_up_abs_error": 7.105427357601002e-15,
+              "n_down": 19.999999999999993,
+              "n_down_target": 20,
+              "n_down_abs_error": 7.105427357601002e-15,
+              "n_tot": 39.99999999999998,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "additive_observables": {
+              "n_up": 19.999999999999993,
+              "n_up_target": 20,
+              "n_up_abs_error": 7.105427357601002e-15,
+              "n_down": 19.999999999999993,
+              "n_down_target": 20,
+              "n_down_abs_error": 7.105427357601002e-15,
+              "n_tot": 39.99999999999998,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 0.0,
+              "variance_n_tot": 0.0
+            },
+            "local_density_mid": 0.9999999863960968,
+            "double_occupancy_mid": 7.472199946061582e-09,
+            "local_sz_mid": 0.49999998545903634,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.17790431177961188,
+            "max_bond": 16
+          },
+          {
+            "chi": 32,
+            "final_energy": -40.013339965588266,
+            "energy_per_site": -1.0003334991397066,
+            "energy_history": [
+              -40.013339965588266
+            ],
+            "sector": {
+              "n_up": 19.999999999999996,
+              "n_up_target": 20,
+              "n_up_abs_error": 3.552713678800501e-15,
+              "n_down": 19.99999999999999,
+              "n_down_target": 20,
+              "n_down_abs_error": 1.0658141036401503e-14,
+              "n_tot": 40.00000000000003,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 2.8421709430404007e-13,
+              "variance_n_tot": 0.0
+            },
+            "additive_observables": {
+              "n_up": 19.999999999999996,
+              "n_up_target": 20,
+              "n_up_abs_error": 3.552713678800501e-15,
+              "n_down": 19.99999999999999,
+              "n_down_target": 20,
+              "n_down_abs_error": 1.0658141036401503e-14,
+              "n_tot": 40.00000000000003,
+              "sz": 0.0,
+              "variance_n_up": 0.0,
+              "variance_n_down": 2.8421709430404007e-13,
+              "variance_n_tot": 0.0
+            },
+            "local_density_mid": 0.999999992720676,
+            "double_occupancy_mid": 1.279461027802972e-08,
+            "local_sz_mid": 0.4999999828467291,
+            "diagnostics": {
+              "ed_used": false,
+              "classical_dmrg_used": false,
+              "lanczos_used": false,
+              "ad_used": true,
+              "dense_hamiltonian_built": false,
+              "sector_mode": "hard",
+              "max_forbidden_abs": 0.0,
+              "max_forbidden_grad_abs": 0.0
+            },
+            "gradient_norm": 0.1766499456109515,
+            "max_bond": 32
+          }
+        ],
+        "sector_clean_each_chi": true,
+        "ed_used": false,
+        "classical_dmrg_used": false,
+        "lanczos_used": false,
+        "dense_hamiltonian_built": false
+      },
+      "reference": {},
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "finite_energy": true,
+        "sector_abs_error": 1e-10,
+        "forbidden_abs": 1e-12,
+        "max_bond_lte_chi": true
+      },
+      "runtime_sec": 4.545412099920213,
+      "notes": "CPU-small hard-sector chi table only. This checks finite energies, sector preservation, and large-N policy flags but does not assert monotonic convergence."
+    },
+    {
+      "case_id": "trend_spinless_free_fermion_large_n_observables",
+      "suite": "literature",
+      "model": "spinless_tv",
+      "parameters": {},
+      "sector": {
+        "target_n": "N/2"
+      },
+      "N": 80,
+      "chi": 0,
+      "method": "analytic large-N free-fermion observable trend",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": null,
+      "energy_per_site": null,
+      "observables": {
+        "rows": [
+          {
+            "N": 40,
+            "particles": 20,
+            "filling": 0.5,
+            "energy": -25.10779711162379,
+            "energy_per_site": -0.6276949277905948,
+            "density_mid": 0.5000000000000003,
+            "density_mid_neighbor": 0.4999999999999994,
+            "connected_density_midbond": -0.10930877757014269
+          },
+          {
+            "N": 80,
+            "particles": 40,
+            "filling": 0.5,
+            "energy": -50.56943379479491,
+            "energy_per_site": -0.6321179224349364,
+            "density_mid": 0.4999999999999995,
+            "density_mid_neighbor": 0.5000000000000002,
+            "connected_density_midbond": -0.10530500301030854
+          }
+        ],
+        "energy_distance_to_thermodynamic": [
+          0.008924844576986612,
+          0.004501849932645019
+        ],
+        "density_mid_abs_error_from_half_filling": [
+          3.3306690738754696e-16,
+          4.996003610813204e-16
+        ],
+        "connected_density_midbond_abs": [
+          0.10930877757014269,
+          0.10530500301030854
+        ]
+      },
+      "reference": {
+        "id": "spinless_free_fermion_open_chain",
+        "type": "analytic",
+        "value": -0.6366197723675814,
+        "observable": "energy_per_site,density,connected_density_correlation"
+      },
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "energy_per_site_trend": "N=80 closer to -2/pi than N=40",
+        "mid_density_abs_error": 0.02,
+        "connected_density_midbond": "finite and nonzero"
+      },
+      "runtime_sec": 0.00016350019723176956,
+      "notes": "Independent single-particle sine-mode reference; no many-body ED or dense Hamiltonian construction."
+    },
+    {
+      "case_id": "trend_hubbard_free_fermion_large_n_observables",
+      "suite": "literature",
+      "model": "hubbard",
+      "parameters": {},
+      "sector": {
+        "target_nup": "N/2",
+        "target_ndown": "N/2"
+      },
+      "N": 80,
+      "chi": 0,
+      "method": "analytic large-N U=0 Hubbard observable trend",
+      "device": "cpu",
+      "dtype": "torch.complex128",
+      "energy": null,
+      "energy_per_site": null,
+      "observables": {
+        "rows": [
+          {
+            "N": 40,
+            "n_up": 20,
+            "n_down": 20,
+            "filling": 1.0,
+            "energy": -50.21559422324758,
+            "energy_per_site": -1.2553898555811895,
+            "n_up_mid": 0.5000000000000003,
+            "n_down_mid": 0.5000000000000003,
+            "density_mid": 1.0000000000000007,
+            "double_occupancy_mid": 0.25000000000000033,
+            "density_mid_neighbor": 0.9999999999999988,
+            "double_occupancy_mid_neighbor": 0.2499999999999994,
+            "connected_density_midbond": -0.21861755514028539
+          },
+          {
+            "N": 80,
+            "n_up": 40,
+            "n_down": 40,
+            "filling": 1.0,
+            "energy": -101.13886758958982,
+            "energy_per_site": -1.2642358448698727,
+            "n_up_mid": 0.4999999999999995,
+            "n_down_mid": 0.4999999999999995,
+            "density_mid": 0.999999999999999,
+            "double_occupancy_mid": 0.2499999999999995,
+            "density_mid_neighbor": 1.0000000000000004,
+            "double_occupancy_mid_neighbor": 0.2500000000000002,
+            "connected_density_midbond": -0.21061000602061708
+          }
+        ],
+        "energy_distance_to_thermodynamic": [
+          0.017849689153973225,
+          0.009003699865290038
+        ],
+        "density_mid_abs_error_from_half_filling": [
+          6.661338147750939e-16,
+          9.992007221626409e-16
+        ],
+        "double_occupancy_mid_abs_error_from_quarter": [
+          3.3306690738754696e-16,
+          4.996003610813204e-16
+        ],
+        "connected_density_midbond_abs": [
+          0.21861755514028539,
+          0.21061000602061708
+        ]
+      },
+      "reference": {
+        "id": "hubbard_free_fermion_limit",
+        "type": "analytic",
+        "value": -1.2732395447351628,
+        "observable": "energy_per_site,density,double_occupancy,connected_density_correlation"
+      },
+      "absolute_error": null,
+      "relative_error": null,
+      "pass": true,
+      "tolerance": {
+        "energy_per_site_trend": "N=80 closer to -4/pi than N=40",
+        "mid_density_abs_error": 0.02,
+        "double_occupancy_abs_error": 0.02,
+        "connected_density_midbond": "finite and nonzero"
+      },
+      "runtime_sec": 0.00016300007700920105,
+      "notes": "Independent spin-resolved sine-mode U=0 reference; no many-body ED or dense Hamiltonian construction."
+    }
+  ],
+  "review_required": [
+    {
+      "item": "Heisenberg N=40/80 interacting AD chi-convergence",
+      "status": "REVIEW REQUIRED",
+      "reason": "Quick suite contains bounded Heisenberg N=20/40/80 chi=4/8/16/32 evidence, not production-depth convergence over larger chi/step budgets."
+    },
+    {
+      "item": "spinless t-V N=40/80 interacting AD chi-convergence",
+      "status": "REVIEW REQUIRED",
+      "reason": "Quick suite contains bounded spinless t-V N=20/40/80 chi=4/8/16/32 hard-sector evidence plus V=0 analytic N=40/80 observables, not production-depth convergence over larger chi/step budgets."
+    },
+    {
+      "item": "Hubbard N=20/40 interacting AD chi-convergence",
+      "status": "REVIEW REQUIRED",
+      "reason": "Quick suite contains bounded Hubbard N=10/20/40 chi=4/8/16/32 hard-sector evidence plus U=0 analytic N=40/80 observables, not production-depth convergence over larger chi/step budgets."
+    },
+    {
+      "item": "interacting large-N observable/correlation literature trends",
+      "status": "REVIEW REQUIRED",
+      "reason": "Current large-N observable trends are analytic free limits or AD smoke fields, not interacting literature-grade trend tables."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "heisenberg_bethe_energy",
+    "model": "heisenberg",
+    "observable": "energy_per_site",
+    "reference_type": "exact",
+    "boundary": "thermodynamic_limit",
+    "value": -0.4431471805599453,
+    "citation": "Bethe ansatz thermodynamic-limit result e_inf = 1/4 - ln(2) for the spin-1/2 antiferromagnetic Heisenberg chain.",
+    "notes": "Finite open-boundary E/N is expected to approach this trend reference with boundary corrections; it is not a strict finite-N target."
+  },
+  {
+    "id": "spinless_free_fermion_open_chain",
+    "model": "spinless_tv",
+    "observable": "ground_energy",
+    "reference_type": "analytic_limit",
+    "boundary": "open",
+    "parameters": {
+      "V": 0.0,
+      "mu": 0.0
+    },
+    "citation": "Open-chain single-particle levels epsilon_k = -2 t cos(k pi/(N+1)); many-body ground state fills negative levels.",
+    "notes": "Used as a small-N analytic trend/reference for the V=0 limit."
+  },
+  {
+    "id": "hubbard_free_fermion_limit",
+    "model": "hubbard",
+    "observable": "ground_energy",
+    "reference_type": "analytic_limit",
+    "boundary": "open",
+    "parameters": {
+      "U": 0.0,
+      "mu": 0.0,
+      "h": 0.0
+    },
+    "citation": "At U=0 the Hubbard chain reduces to two spin species of open-chain free fermions.",
+    "notes": "Used as a quick literature/analytic sanity reference; interacting finite-N cases use ED only for small N."
+  }
+]

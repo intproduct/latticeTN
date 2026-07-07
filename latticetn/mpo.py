@@ -127,123 +127,83 @@ class MPO:
                 + V sum_i (n_i - 1/2)(n_{i+1} - 1/2)
                 - mu sum_i (n_i - 1/2)
 
-        Bond dimension D=6 with an explicit Jordan-Wigner parity-carrying
-        virtual state, so the fermionic operators anticommute correctly across
-        the chain (this is NOT a hard-core-boson MPO).
+        Bond dimension D=5. Global single-fermion operators carry
+        Jordan-Wigner strings, but for adjacent Hamiltonian products those
+        strings cancel on all sites left of the bond.
 
-        The dense reference builds each global hopping operator as
-        ``F^{i} x c^d_i x c_{i+1}`` (parity string on all sites left of i,
-        then c^d at i, then c at i+1 — the JW string between the two sites
-        cancels). The MPO reproduces this by routing every hop through a
-        parity-carrying virtual state that emits ``F`` on every site from the
-        chain start up to (but not including) the left factor site, then emits
+        Stage 11 correction: the implementation below is the authoritative
+        transition table. Any older mention of carrying a left parity string
+        for nearest-neighbor hopping is obsolete; such a string would produce
+        left-occupation-dependent signs that fail the independent JW audit.
+
+        The Hamiltonian MPO emits the reduced adjacent product directly:
         ``c^d`` (or ``c``) at the left site, then ``c`` (or ``c^d``) at the
-        right site.
+        right site. It has no virtual state carrying a left JW parity string.
+        Nonlocal single-particle Green functions require explicit JW strings;
+        this nearest-neighbor Hamiltonian does not.
 
         Virtual bond states:
 
-            0: idle       — nothing carried yet
-            1: carry F    — JW parity string in flight (for a hop started
-                            further right that still needs F on this site)
-            2: carry c^d  — left factor of a c^d_i c_{i+1} hop in flight
-            3: carry c    — left factor of a c_i c^d_{i+1} hop in flight
-            4: carry nmh  — left factor of a density-density term in flight
-            5: done       — terminal
+            0: idle
+            1: carry c^d
+            2: carry c
+            3: carry n-1/2
+            4: done
 
         Bulk transitions (row = left virtual, col = right virtual; the entry
         is the local operator acting on the physical index at this site):
 
             0->0  I                 (idle: identity propagation)
-            0->5  -mu*(n-1/2)       (on-site chemical potential, emitted here)
-            0->4  (n-1/2)           (start a density-density interaction)
-            1->1  F                 (parity string propagates one more site)
-            1->2  -t * c^d          (parity done; start c^d_i c_{i+1} here)
-            1->3  -t * c            (parity done; start c_i c^d_{i+1} here)
-            2->5  c                 (complete c^d_i c_{i+1} on the right site)
-            3->5  c^d               (complete c_i c^d_{i+1} on the right site)
-            4->5  V * (n-1/2)       (complete the interaction on the right site)
-            5->5  I                 (done stays done)
-
-        The left boundary (site 0) ADDITIONALLY carries:
-            0->1  F                 (start the JW parity string at site 0)
-            0->2  -t * c^d          (start bond 0's hop directly, no parity)
-            0->3  -t * c            (start bond 0's h.c. hop directly, no parity)
-        The parity-start ``0->1`` is placed ONLY at site 0 (not in the bulk):
-        if the bulk allowed ``0->1``, a parity string could start at any site k,
-        producing a spurious hop ``F_k..F_{i-1} c_i c_{i+1}`` with PARTIAL parity
-        (missing ``F_0..F_{k-1}``). Bond 0 starts its hop directly (``0->2``)
-        because ``F^0 = I`` (empty string).
-
-        A hop on bond (i, i+1) traverses: ``0->1`` (F) at site 0, ``1->1`` (F)
-        on sites 1..i-1, ``1->2`` (-t c^d) at site i, ``2->5`` (c) at site
-        i+1. The product of emitted operators is
-        ``F_0 F_1 ... F_{i-1} (-t c^d_i) c_{i+1}``, exactly the dense
-        reference's ``-t F^{i} x c^d_i x c_{i+1}``. The h.c. hop traverses
-        ``0->1 ... 1->3 -> 5`` analogously. The interaction and on-site terms
-        are diagonal so need no parity string.
+            0->4  -mu*(n-1/2)       (on-site chemical potential, emitted here)
+            0->3  (n-1/2)           (start a density-density interaction)
+            0->1  -t * c^d          (start c^d_i c_{i+1} here)
+            0->2  -t * c            (start c_i c^d_{i+1} here)
+            1->4  c                 (complete c^d_i c_{i+1} on the right site)
+            2->4  c^d               (complete c_i c^d_{i+1} on the right site)
+            3->4  V * (n-1/2)       (complete the interaction on the right site)
+            4->4  I                 (done stays done)
 
         ``to_dense`` of this MPO matches ``operators.spinless_fermion_dense``
         (see tests/test_spinless_fermion_mpo_dense.py).
         """
         ops = fermion_operators(dtype=self.dtype, device=self.device)
         I = ops["I"]
-        F = ops["F"]
         c = ops["c"]
         cdag = ops["cdag"]
         nmh = ops["n_minus_half"]
         d = self.dim
-        D = 6
+        D = 5
 
         def bulk():
             W = tc.zeros((D, D, d, d), dtype=self.dtype, device=self.device)
             # idle -> idle: pure identity (idle propagation; on-site term is
-            # emitted via 0->5 below so it is NOT multiplied across sites).
+            # emitted via 0->4 below so it is NOT multiplied across sites).
             W[0, 0, :, :] = I
             # idle -> done: on-site chemical potential -mu*(n-1/2) at this site.
-            W[0, 5, :, :] = (-mu) * nmh
-            # NOTE: 0->1 (start parity) is ONLY in the left boundary, not here.
-            # If the bulk allowed 0->1, a parity string could start at any site
-            # k, producing a spurious hop F_k..F_{i-1} c_i c_{i+1} with PARTIAL
-            # parity (missing F_0..F_{k-1}). The parity string for bond i must
-            # always start at site 0, so 0->1 lives only at site 0.
+            W[0, 4, :, :] = (-mu) * nmh
+            # idle -> carry-left-factor: adjacent hopping. The left JW strings
+            # cancel for cdag_i c_{i+1} and its h.c., so no parity-carry state
+            # is present in the Hamiltonian MPO.
+            W[0, 1, :, :] = (-t) * cdag
+            W[0, 2, :, :] = (-t) * c
             # idle -> carry-(n-1/2): start a density-density interaction
-            W[0, 4, :, :] = nmh
-            # carry-F -> carry-F: parity string propagates one more site
-            W[1, 1, :, :] = F
-            # carry-F -> carry-c^d : parity done; left factor c^d (bond i>=1)
-            W[1, 2, :, :] = (-t) * cdag
-            # carry-F -> carry-c   : parity done; left factor c (bond i>=1)
-            W[1, 3, :, :] = (-t) * c
+            W[0, 3, :, :] = nmh
             # carry-c^d -> done: right factor c of c^d_i c_{i+1}
-            W[2, 5, :, :] = c
+            W[1, 4, :, :] = c
             # carry-c   -> done: right factor c^d of c_i c^d_{i+1}
-            W[3, 5, :, :] = cdag
+            W[2, 4, :, :] = cdag
             # carry-(n-1/2) -> done: right factor (n-1/2) of the interaction
-            W[4, 5, :, :] = V * nmh
+            W[3, 4, :, :] = V * nmh
             # done -> done
-            W[5, 5, :, :] = I
-            return W
-
-        def left_boundary():
-            """Site-0 tensor: row 0 of bulk PLUS the parity-start (0->1: F) and
-            the direct bond-0 hop start (0->2/0->3, since F^0 = I -> no parity)."""
-            W = bulk().clone()
-            # idle -> carry-F: start the JW parity string at site 0 (bonds i>=1)
-            W[0, 1, :, :] = F
-            # idle -> carry-c^d : start bond-0 hop directly at site 0 (no parity)
-            W[0, 2, :, :] = (-t) * cdag
-            # idle -> carry-c : start bond-0 h.c. hop directly at site 0
-            W[0, 3, :, :] = (-t) * c
+            W[4, 4, :, :] = I
             return W
 
         for i in range(self.length):
+            W = bulk()
             if i == 0:
-                W = left_boundary()
                 W = W[0:1, :, :, :]            # keep only idle row on the left
-            else:
-                W = bulk()
-                if i == self.length - 1:
-                    W = W[:, 5:6, :, :]        # keep only done col on the right
+            if i == self.length - 1:
+                W = W[:, 4:5, :, :]            # keep only done col on the right
             self.tensors[i] = W
         return self
 
@@ -273,7 +233,7 @@ class MPO:
         the site-major global mode index of any spin on site ``i+1`` is larger
         than all modes on sites 0..i). In the *product* ``c^d_{i sigma}
         c_{i+1, sigma}`` the two parity strings on sites 0..i-1 therefore
-        SQUARE to identity and cancel — no inter-site parity string survives
+        SQUARE to identity and cancel; no inter-site parity string survives
         in the product. The only surviving parity is the single ``P`` on site
         ``i`` contributed by the RIGHT factor's string (which extends one site
         further right than the left factor's). The MPO captures this by
@@ -289,12 +249,12 @@ class MPO:
 
         Virtual bond states (D=6):
 
-            0: idle          — nothing carried yet
-            1: carry c^d_up  — left factor of c^d_i c_{i+1} (up) in flight
-            2: carry c_up    — left factor of the up h.c. (c_i, for c^d_{i+1} c_i)
-            3: carry c^d_down — left factor of c^d_i c_{i+1} (down) in flight
-            4: carry c_down  — left factor of the down h.c.
-            5: done          — terminal
+            0: idle          - nothing carried yet
+            1: carry c^d_up  - left factor of c^d_i c_{i+1} (up) in flight
+            2: carry c_up    - left factor of the up h.c. (c_i, for c^d_{i+1} c_i)
+            3: carry c^d_down - left factor of c^d_i c_{i+1} (down) in flight
+            4: carry c_down  - left factor of the down h.c.
+            5: done          - terminal
 
         Bulk transitions (row = left virtual, col = right virtual; the entry is
         the local 4x4 operator acting on the physical index at this site):
