@@ -8,7 +8,8 @@ def test_registry_contains_required_presets():
     assert {"heisenberg", "tfi", "spinless_tv", "hubbard", "xxz"} <= ids
     schema = get_model_schema("hubbard")
     assert schema["local_basis"] == "hubbard"
-    assert "ad_dmrg" in schema["supported_methods"]
+    assert "ad_global" in schema["supported_methods"]
+    assert "ad_two_site" in schema["supported_methods"]
     assert "hard" in schema["supported_sector_modes"]
 
 

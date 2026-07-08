@@ -32,8 +32,8 @@ dev = [
     "pytest-timeout>=2.2",
 ]
 
-[tool.setuptools]
-packages = ["latticetn"]
+[tool.setuptools.packages.find]
+include = ["latticetn*"]
 
 [tool.pytest.ini_options]
 # Mirror pytest.ini so `pip install -e .` installs also scope collection to tests/.

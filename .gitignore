@@ -65,8 +65,12 @@ ENV/
 *.log
 logs/
 tmp/
+tmp2/
+tmp3/
 scratch/
 *.tmp
+.tmp_pytest/
+.tmp_stage11_benchmark_suite/
 # JSON results emitted by fast score runs (regenerated on demand)
 docs/benchmark_fast_results.json
 

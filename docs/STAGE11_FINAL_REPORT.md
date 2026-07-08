@@ -3,6 +3,10 @@
 Status: REVIEW REQUIRED, with all current automated Stage 11 quick checks
 passing.
 
+Stabilization note: Stage 11 expansion is paused during the current
+semantic-integrity sprint. The large-N 2-3 step cases below are smoke and
+integration evidence only; they must not be cited as convergence evidence.
+
 This report summarizes the current Stage 11 evidence for physics benchmarks,
 literature/trend reproduction, observable validation, and full-stack scientific
 audit. It does not replace `docs/STAGE11_ACCEPTANCE_AUDIT.md`; that file is the

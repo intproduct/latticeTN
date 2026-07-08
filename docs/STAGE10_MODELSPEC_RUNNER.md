@@ -95,7 +95,19 @@ The result dict contains:
 - `observables`
 - `diagnostics`
 
-AD-DMRG jobs report:
+AD jobs use explicit canonical method identities:
+
+- `ad_global`: optimize all MPS tensors with a persistent torch optimizer.
+- `ad_two_site`: optimize one trainable two-site center tensor per bond, then
+  split by SVD outside the loss graph.
+- `dmrg`: classical DMRG reference path.
+
+The old `ad_dmrg` name is a deprecated compatibility alias only. It resolves
+deterministically to `ad_global`, emits a deprecation warning, and records the
+alias resolution in result metadata. New configs, tests, and examples should
+use `ad_global` or `ad_two_site` directly.
+
+AD jobs report:
 
 ```json
 {
@@ -132,7 +144,7 @@ model = build_model_spec(
 result = run_latticetn_job(
     model,
     {
-        "name": "ad_dmrg",
+        "name": "ad_global",
         "chi": 4,
         "sweeps": 1,
         "optimizer": "adam",
@@ -189,11 +201,15 @@ python .\scripts\run_ad_model_benchmark.py `
   --target-nup 20 `
   --target-ndown 20 `
   --sector-mode hard `
+  --method ad_global `
   --no-ed `
   --output .\outputs\hubbard_N40_ad_result.json
 ```
 
-It can also accept a structured model JSON via `--model-spec-json`.
+It can also accept a structured model JSON via `--model-spec-json`. With
+`--method auto`, sector `none` uses the explicit two-site AD path; `soft` and
+`hard` sectors use explicit global AD paths until charge-aware two-site
+splitting exists.
 
 ## Observables
 

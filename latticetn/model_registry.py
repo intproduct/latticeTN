@@ -13,7 +13,7 @@ _SCHEMAS: dict[str, dict] = {
         "label": "1D Heisenberg spin-1/2 chain",
         "local_basis": "spin_half",
         "parameters": [{"name": "J", "type": "float", "default": 1.0}],
-        "supported_methods": ["dmrg", "ad_dmrg"],
+        "supported_methods": ["dmrg", "ad_global", "ad_two_site"],
         "supported_sector_modes": ["none"],
     },
     "tfi": {
@@ -24,7 +24,7 @@ _SCHEMAS: dict[str, dict] = {
             {"name": "J", "type": "float", "default": 1.0},
             {"name": "h", "type": "float", "default": 1.0},
         ],
-        "supported_methods": ["ad_dmrg"],
+        "supported_methods": ["ad_global", "ad_two_site"],
         "supported_sector_modes": ["none"],
     },
     "spinless_tv": {
@@ -36,7 +36,7 @@ _SCHEMAS: dict[str, dict] = {
             {"name": "V", "type": "float", "default": 0.0},
             {"name": "mu", "type": "float", "default": 0.0},
         ],
-        "supported_methods": ["ad_dmrg"],
+        "supported_methods": ["ad_global", "ad_two_site"],
         "supported_sector_modes": ["none", "soft", "hard"],
     },
     "hubbard": {
@@ -49,7 +49,7 @@ _SCHEMAS: dict[str, dict] = {
             {"name": "mu", "type": "float", "default": 0.0},
             {"name": "h", "type": "float", "default": 0.0},
         ],
-        "supported_methods": ["ad_dmrg"],
+        "supported_methods": ["ad_global", "ad_two_site"],
         "supported_sector_modes": ["none", "soft", "hard"],
     },
     "xxz": {

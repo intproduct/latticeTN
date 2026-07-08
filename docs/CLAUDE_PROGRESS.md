@@ -1535,6 +1535,84 @@ Continue only with bounded CPU-small evidence, or request explicit resource
 bounds for production-depth convergence/literature trend jobs before claiming
 Stage 11 completion.
 
+## Checkpoint Stabilization-01: Method Identity and Conditioning Repair
+
+Goal:
+Pause Stage 11 expansion and repair numerical conditioning, method identity,
+CLI/config propagation, optimizer lifecycle, hard-sector initialization,
+packaging discovery, and generated-artifact hygiene.
+
+Files changed:
+- `latticetn/ad_two_site.py`: added explicit pre-optimization
+  `normalize_theta_`, default `precondition="theta_norm"` in
+  `train_ad_two_site`, explicit LBFGS tolerances, and optimizer/closure counts.
+- `latticetn/config_schema.py`, `latticetn/runner.py`,
+  `scripts/run_ad_model_benchmark.py`: added canonical `ad_global` and
+  `ad_two_site` identities; kept `ad_dmrg` only as a deprecated alias to
+  `ad_global`; propagated init/projection/precondition/stabilization/grad
+  clipping/LBFGS settings; made global Adam persistent across global steps.
+- `latticetn/charge_sectors.py`: preserved requested hard-sector product
+  charge paths through chi trimming.
+- `latticetn/model_registry.py`: advertises canonical method names.
+- `pyproject.toml`: switched to `latticetn*` package discovery.
+- `.gitignore`: ignores local pytest temp output and generated Stage 11 scratch.
+- Added focused regression tests for theta preconditioning, algorithm identity,
+  hard-sector initializer robustness, and package discovery.
+- Removed `.tmp_stage11_benchmark_suite/` from Git tracking with
+  `git rm --cached` while leaving files on disk.
+
+Commands run:
+- `python -m pip install -r requirements-dev.txt`
+- `python -m pytest -q tests\test_two_site_preconditioning.py tests\test_runner_algorithm_identity.py tests\test_hard_sector_initializer_robustness.py tests\test_packaging_discovery.py`
+- `python -m pytest -q -p no:cacheprovider tests\test_runner_schema.py tests\test_model_registry.py tests\test_runner_algorithm_identity.py tests\test_two_site_preconditioning.py tests\test_hard_sector_initializer_robustness.py tests\test_packaging_discovery.py`
+- `python scripts\run_ad_model_benchmark.py --model heisenberg --N 4 --chi 2 --sweeps 1 --device cpu --dtype complex128 --optimizer adam --local-steps 1 --lr 0.01 --init neel --output tmp\heis_cli.json --no-ed`
+- `python scripts\run_ad_model_benchmark.py --model spinless_tv --N 4 --chi 2 --sweeps 1 --device cpu --dtype complex128 --optimizer adam --local-steps 1 --lr 0.01 --init spinless_cdw --target-n 2 --sector-mode hard --output tmp\spinless_hard_cli.json --no-ed`
+- `python scripts\run_ad_model_benchmark.py --model heisenberg --N 4 --chi 4 --method ad_global --sweeps 1 --device cpu --dtype complex128 --optimizer adam --local-steps 1 --lr 0.01 --init random --stabilization none --grad-clip 0.5 --output tmp\heis_random_global_cli.json --no-ed`
+- `python scripts\validation_score.py --fast`
+- `python -B -c "from pathlib import Path; import setuptools.build_meta as bm; out=Path('tmp/wheelhouse'); out.mkdir(parents=True, exist_ok=True); print(bm.build_wheel(str(out)))"`
+- Isolated built-tree import from `build/lib` for
+  `latticetn.benchmarks.exact_reference`.
+
+Result:
+- New targeted tests: 12 passed.
+- Runner/model/precondition/package subset: 20 passed, 1 skipped.
+- CLI dispatch smoke:
+  - Heisenberg sector-none default ran `ad_two_site`
+    (`optimizer_path=two_site_ad_local_theta`).
+  - spinless hard sector ran `ad_global`
+    (`optimizer_path=global_ad_hard_charge_mask`) with zero forbidden amplitude
+    and exact particle number.
+  - explicit random global run reported actual bond dims `[2, 4, 2]`, honored
+    `projection=none`, `grad_clip=0.5`, and serialized global-step metadata.
+- Fast validation: Score PASS.
+- Setuptools package discovery copied `latticetn/benchmarks` into `build/lib`,
+  and importing `latticetn.benchmarks.exact_reference` from that built tree
+  succeeded.
+
+Current failing test or bottleneck:
+- The sandbox could not write/remove generated build metadata and pytest temp
+  roots. After escalated cleanup of untracked generated artifacts and escalated
+  runs for the affected commands:
+  - Wheel build succeeded and produced
+    `tmp2/wheelhouse/latticetn-0.1.0-py3-none-any.whl`.
+  - Isolated import directly from the wheel succeeded for `latticetn`,
+    `latticetn.benchmarks`, and `latticetn.benchmarks.exact_reference`.
+  - Tmp-path based tests
+    `tests/test_hard_sector_ad_runner.py tests/test_ad_model_benchmark_cli.py`
+    passed with one CUDA skip.
+  - Re-run targeted subset:
+    `tests/test_runner_schema.py tests/test_model_registry.py
+    tests/test_runner_algorithm_identity.py tests/test_two_site_preconditioning.py
+    tests/test_hard_sector_initializer_robustness.py
+    tests/test_packaging_discovery.py` -> 20 passed, 1 skipped.
+  - Re-run `python scripts/validation_score.py --fast` -> Score PASS.
+- Remaining limitation: no long N=40/N=80 manual acceptance jobs were run.
+
+Next action:
+Run a final requirement-by-requirement audit, inspect the final diff for
+generated artifacts, and do not add new Stage 11 cases during this
+stabilization sprint.
+
 ## Checkpoint Stage 11D-21: Bounded Chi=32 Large-N Evidence
 
 Goal:
@@ -1594,6 +1672,69 @@ Next action:
 Continue only with bounded CPU-small evidence, or request explicit resource
 bounds for production-depth convergence/literature trend jobs before claiming
 Stage 11 completion.
+
+## Checkpoint Stabilization-02: Runner Projection Diagnostics
+
+Goal:
+Close the remaining runner-level conditioning gap without expanding Stage 11
+benchmark scope: verify `ad_global` honors the configured projection mode and
+records finite norm/gradient diagnostics through the unified runner API.
+
+Files changed:
+- Extended `tests/test_runner_algorithm_identity.py` with a parameterized
+  CPU-small `ad_global` test for `projection in {none,tensor_norm,canonical}`.
+- The test spies on the runner projection call, checks the selected projection
+  is applied once per global optimizer step, and asserts finite final energy,
+  best energy, gradient norm, and per-step state norm diagnostics.
+
+Commands run:
+- `python -m pytest -q -p no:cacheprovider tests\test_runner_algorithm_identity.py`
+- `python -m pytest -q -p no:cacheprovider tests\test_runner_schema.py tests\test_model_registry.py tests\test_runner_algorithm_identity.py tests\test_two_site_preconditioning.py tests\test_hard_sector_initializer_robustness.py tests\test_packaging_discovery.py`
+- `python scripts\validation_score.py --fast`
+
+Result:
+- 9 passed.
+- Focused stabilization subset: 23 passed, 1 skipped. The only warnings were
+  the expected `ad_dmrg` deprecation warnings in legacy compatibility tests.
+- Fast validation: Score PASS. Pytest emitted the existing tensor-to-float
+  warning in `tests/test_mps_dense.py`, expected `ad_dmrg` deprecation
+  warnings, and a non-fatal `.pytest_cache` write warning.
+
+Current failing test or bottleneck:
+- No new failure found. Stage 11 expansion remains paused; this checkpoint is
+  bounded stabilization coverage, not new large-system convergence evidence.
+
+Next action:
+Perform final diff/status audit and summarize remaining sprint scope.
+
+## Checkpoint Stabilization-03: CI Smoke Coverage
+
+Goal:
+Cover the sprint's CI quick-smoke item without adding long physics jobs or GPU
+requirements.
+
+Files changed:
+- Added `.github/workflows/ci.yml`.
+- The workflow installs CPU test dependencies, installs the package editable,
+  runs `python scripts/validation_score.py --fast`, builds a no-deps wheel, and
+  imports `latticetn.benchmarks.exact_reference` from that wheel.
+
+Commands run:
+- `python -c "from pathlib import Path; text=Path('.github/workflows/ci.yml').read_text(); assert 'python scripts/validation_score.py --fast' in text; assert 'python -m pip wheel . --no-deps --wheel-dir dist' in text; assert 'latticetn.benchmarks.exact_reference' in text; print('ci workflow smoke ok')"`
+- `python -m pytest -q -p no:cacheprovider tests\test_runner_schema.py tests\test_model_registry.py tests\test_runner_algorithm_identity.py tests\test_two_site_preconditioning.py tests\test_hard_sector_initializer_robustness.py tests\test_packaging_discovery.py`
+
+Result:
+- CI workflow smoke check passed.
+- Focused stabilization subset after CI addition: 23 passed, 1 skipped, with
+  expected `ad_dmrg` deprecation warnings in legacy compatibility tests.
+
+Current failing test or bottleneck:
+- The workflow itself was not executed by GitHub Actions in this local
+  workspace. Local equivalents for fast validation and wheel import passed in
+  Stabilization-01/02.
+
+Next action:
+Summarize final stabilization status and remaining limitations.
 
 ## Checkpoint Stage 11D-20: Bounded Chi=16 Large-N Evidence
 

@@ -26,6 +26,7 @@ consequence of the SVD *split*, never of a solver.
 two-site mixed-canonical MPS at bond (i, i+1)
    -> build frozen left/right MPO environments L, R  (constants, under no_grad)
    -> Theta = A_i * A_{i+1}                          (single trainable leaf)
+   -> optional precondition: normalize Theta to unit Frobenius norm under no_grad
    -> loss = <Theta|H_eff|Theta> / <Theta|Theta>     (differentiable einsum)
    -> loss.backward()                                (autograd; only Theta grads)
    -> torch optimizer step (Adam / LBFGS) on Theta
@@ -44,6 +45,12 @@ two-site mixed-canonical MPS at bond (i, i+1)
 - `SVD` / `QR` / `canonicalization` / `compression` are permitted **only** as
   the post-step split and the inter-bond re-canonicalization, run under
   `torch.no_grad()` on detached data, **outside the loss graph**.
+- Pre-optimization center normalization is a distinct conditioning
+  preconditioner, defaulted as `precondition="theta_norm"` in
+  `train_ad_two_site`. It rescales the active `Theta` leaf before the first
+  optimizer closure at each bond so LBFGS/Adam see a healthy parameter scale.
+  It is separate from post-step `stabilization`; neither operation changes the
+  scale-invariant Rayleigh quotient.
 - `dmrg.py`, `lanczos.py`, and any classical / dense local eigensolver
   (`eigh`) are **reference baselines / oracles only** and are never imported or
   called inside this module.
@@ -58,6 +65,9 @@ two-site mixed-canonical MPS at bond (i, i+1)
   - `parameters()` — the single `Θ` tensor (trainable).
   - `reset_bond(bond)` — re-canonicalize at a new bond and rebuild `Θ` +
     environments (gauge fixing + constant building, NOT the optimizer).
+  - `normalize_theta_(eps=...)` — pre-optimization conditioning that divides
+    finite nonzero `Theta` by its Frobenius norm under `torch.no_grad()` while
+    preserving the trainable leaf Parameter.
   - `split(max_bond_dim, cutoff, direction)` — SVD split of `Θ` back into two
     site tensors with optional truncation (compression/stabilization, NOT the
     optimizer). Returns `(truncation_error, kept_bond)`.
@@ -92,7 +102,7 @@ The main loss path (`ADTwoSiteOptimizer.energy` / `loss`) contains NO
 canonicalization helper. Every `no_grad` / `.data` / `.detach()` / `svd` / `qr`
 lives in explicitly-marked preprocessing / post-step helpers
 (`_two_site_mixed_canonical`, `_left_mpo_env`, `_right_mpo_env`,
-`_split_theta`, `ADTwoSiteOptimizer.reset_bond`, `split`,
+`_split_theta`, `ADTwoSiteOptimizer.reset_bond`, `normalize_theta_`, `split`,
 `_stabilize_tensor_norm`).
 
 Enforced by AST inspection in `tests/test_ad_two_site_policy.py`.

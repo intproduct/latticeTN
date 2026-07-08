@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  fast-validation:
+    name: Fast validation and package smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -e .
+
+      - name: Run fast validation
+        run: python scripts/validation_score.py --fast
+
+      - name: Build wheel
+        run: python -m pip wheel . --no-deps --wheel-dir dist
+
+      - name: Import package modules from wheel
+        shell: python
+        run: |
+          import glob
+          import os
+          import sys
+          wheel_paths = glob.glob(os.path.join("dist", "latticetn-*.whl"))
+          assert wheel_paths, "wheel was not built"
+          sys.path = [wheel_paths[0]]
+          import latticetn
+          import latticetn.benchmarks
+          import latticetn.benchmarks.exact_reference
+          print(latticetn.__file__)
+          print(latticetn.benchmarks.exact_reference.__file__)

@@ -54,6 +54,7 @@ boundary, complex128, CPU-only.
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 import torch as tc
@@ -288,6 +289,24 @@ class ADTwoSiteOptimizer:
     def parameters(self):
         return [self.theta]
 
+    def normalize_theta_(self, eps: float = 1e-300) -> float:
+        """Normalize the active two-site center outside the loss graph.
+
+        This is a numerical preconditioner for the scale-invariant Rayleigh
+        quotient. It preserves ``theta`` as the same trainable leaf Parameter
+        and never enters the differentiable energy graph.
+        """
+        with tc.no_grad():
+            n = self.theta.norm()
+            n_float = float(n.detach().real.cpu())
+            if (not math.isfinite(n_float)) or n_float <= eps:
+                raise FloatingPointError(
+                    "cannot normalize two-site theta: Frobenius norm is "
+                    f"{n_float!r}; check MPS gauge/initialization"
+                )
+            self.theta.div_(n.to(dtype=self.theta.dtype, device=self.theta.device))
+            return n_float
+
     # ---- differentiable loss (the AD mainline; autograd-clean) ----
     def energy(self) -> tc.Tensor:
         """Differentiable local Rayleigh quotient E = <Θ|H_eff|Θ>/<Θ|Θ>.
@@ -351,8 +370,11 @@ def train_ad_two_site(mps: MPS, mpo: MPO, num_sweeps: int = 2,
                       local_steps: int = 20, lr: float = 1.0,
                       optimizer: Literal["adam", "lbfgs"] = "lbfgs",
                       lbfgs_iters: int = 20,
+                      lbfgs_tolerance_grad: float = 1e-12,
+                      lbfgs_tolerance_change: float = 1e-15,
                       max_bond_dim: int | None = None,
                       cutoff: float | None = None,
+                      precondition: Literal["theta_norm", "none"] = "theta_norm",
                       stabilization: Literal["none", "tensor_norm"] = "none",
                       init_bond: int = 0,
                       verbose: bool = False) -> dict:
@@ -380,35 +402,55 @@ def train_ad_two_site(mps: MPS, mpo: MPO, num_sweeps: int = 2,
     trunc_history: list[float] = []
     sweeps: list[dict] = []
     per_bond_trunc: list[list[float]] = []
+    precondition_norms: list[float | None] = []
+    optimizer_steps = 0
+    closure_evals = 0
 
     trunc_now: list[float] = []
 
     def _global_e() -> float:
-        return float(adtso.global_energy().real)
+        return float(adtso.global_energy().detach().real.cpu())
 
     def _local_optimize(bond: int, direction: str) -> tuple[float, int]:
+        nonlocal optimizer_steps, closure_evals
         adtso.reset_bond(bond)
+        if precondition == "theta_norm":
+            precondition_norms.append(adtso.normalize_theta_())
+        elif precondition == "none":
+            precondition_norms.append(None)
+        else:
+            raise ValueError(
+                "precondition must be 'theta_norm' or 'none', "
+                f"got {precondition!r}"
+            )
         params = adtso.parameters()
         if optimizer == "adam":
             opt = tc.optim.Adam(params, lr=lr)
             for _ in range(local_steps):
                 opt.zero_grad()
                 e = adtso.energy()
+                closure_evals += 1
                 e.backward()
                 opt.step()
+                optimizer_steps += 1
                 if stabilization == "tensor_norm":
                     _stabilize_tensor_norm(adtso)
         elif optimizer == "lbfgs":
             opt = tc.optim.LBFGS(params, lr=lr, max_iter=lbfgs_iters,
+                                 tolerance_grad=lbfgs_tolerance_grad,
+                                 tolerance_change=lbfgs_tolerance_change,
                                  line_search_fn="strong_wolfe")
 
             def closure():
+                nonlocal closure_evals
                 opt.zero_grad()
                 e = adtso.energy()
+                closure_evals += 1
                 e.backward()
                 return e
             for _ in range(max(1, local_steps // max(1, lbfgs_iters))):
                 opt.step(closure)
+                optimizer_steps += 1
                 if stabilization == "tensor_norm":
                     _stabilize_tensor_norm(adtso)
         else:
@@ -469,9 +511,15 @@ def train_ad_two_site(mps: MPS, mpo: MPO, num_sweeps: int = 2,
         "local_steps": local_steps,
         "lr": lr,
         "optimizer": optimizer,
+        "optimizer_steps": optimizer_steps,
+        "closure_evals": closure_evals,
         "max_bond_dim": max_bond_dim,
         "cutoff": cutoff,
+        "precondition": precondition,
+        "precondition_norms": precondition_norms,
         "stabilization": stabilization,
+        "lbfgs_tolerance_grad": lbfgs_tolerance_grad,
+        "lbfgs_tolerance_change": lbfgs_tolerance_change,
         "init_bond": init_bond,
     }
 

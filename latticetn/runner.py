@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import warnings
 from argparse import Namespace
 from typing import Any
 
@@ -31,6 +32,8 @@ from .sector_observables import (
 from .charges import local_number_operator, local_ntot_operator, local_sz_operator
 from .fermion_operators import hubbard_local_operators
 from . import contractions as K
+from .ad_two_site import train_ad_two_site
+from .ad_variational import _project
 
 
 def parse_dtype(name: str) -> tc.dtype:
@@ -73,9 +76,25 @@ def _target_nup_ndown(model: ModelSpec) -> tuple[int | None, int | None]:
     return model.sector.get("target_nup"), model.sector.get("target_ndown")
 
 
-def _make_initial_mps(model: ModelSpec, method: MethodConfig, dtype, device) -> tuple[MPS, ChargeAwareMPS | None]:
+def _resolved_initialization(model: ModelSpec, method: MethodConfig) -> str:
+    init = method.initialization or "auto"
+    if init != "auto":
+        return init
+    if model.name in {"heisenberg", "tfi"}:
+        return "neel"
+    if model.name == "spinless_tv":
+        return "spinless_cdw"
+    if model.name == "hubbard":
+        return "hubbard_neel"
+    return "random"
+
+
+def _make_initial_mps(model: ModelSpec, method: MethodConfig, dtype, device) -> tuple[MPS, ChargeAwareMPS | None, str]:
     name = model.name
     mode = _sector_mode(model, method)
+    init = _resolved_initialization(model, method)
+    if init == "random" and mode != "hard":
+        return MPS(model.N, _model_dim(name), method.chi, dtype=dtype, device=device), None, init
     if mode == "hard":
         if name == "spinless_tv":
             target = _target_n(model)
@@ -83,8 +102,11 @@ def _make_initial_mps(model: ModelSpec, method: MethodConfig, dtype, device) -> 
                 if model.N % 2 != 0:
                     raise ValueError("hard spinless sector requires target_n for odd N")
                 target = model.N // 2
-            camps = spinless_hard_sector_product_mps(model.N, target, method.chi, dtype=dtype, device=device)
-            return camps.mps, camps
+            pattern = "cdw" if init in {"spinless_cdw", "cdw"} else "left"
+            camps = spinless_hard_sector_product_mps(
+                model.N, target, method.chi, pattern=pattern, dtype=dtype, device=device
+            )
+            return camps.mps, camps, init
         if name == "hubbard":
             nup, ndown = _target_nup_ndown(model)
             if nup is None or ndown is None:
@@ -92,17 +114,25 @@ def _make_initial_mps(model: ModelSpec, method: MethodConfig, dtype, device) -> 
                     raise ValueError("hard Hubbard sector requires target_nup/target_ndown for odd N")
                 nup = ndown = model.N // 2
             camps = hubbard_hard_sector_product_mps(
-                model.N, nup, ndown, method.chi, dtype=dtype, device=device
+                model.N, nup, ndown, method.chi,
+                pattern="neel" if init in {"hubbard_neel", "neel"} else "balanced",
+                dtype=dtype, device=device
             )
-            return camps.mps, camps
+            return camps.mps, camps, init
         raise ValueError("hard sector mode is supported only for spinless_tv and hubbard")
-    if name in {"heisenberg", "tfi"}:
-        return neel_spin_state(model.N, dtype=dtype, device=device), None
-    if name == "spinless_tv":
-        return spinless_half_filled_cdw_state(model.N, dtype=dtype, device=device), None
-    if name == "hubbard":
-        return hubbard_half_filled_neel_state(model.N, dtype=dtype, device=device), None
-    return MPS(model.N, _model_dim(name), method.chi, dtype=dtype, device=device), None
+    if init == "neel":
+        if name not in {"heisenberg", "tfi"}:
+            raise ValueError(f"initialization {init!r} is valid only for spin models")
+        return neel_spin_state(model.N, dtype=dtype, device=device), None, init
+    if init in {"spinless_cdw", "cdw"}:
+        if name != "spinless_tv":
+            raise ValueError(f"initialization {init!r} is valid only for spinless_tv")
+        return spinless_half_filled_cdw_state(model.N, dtype=dtype, device=device), None, init
+    if init in {"hubbard_neel", "neel_hubbard"}:
+        if name != "hubbard":
+            raise ValueError(f"initialization {init!r} is valid only for hubbard")
+        return hubbard_half_filled_neel_state(model.N, dtype=dtype, device=device), None, init
+    raise ValueError(f"unsupported initialization {init!r}")
 
 
 def _energy(mps: MPS, mpo) -> tc.Tensor:
@@ -193,9 +223,9 @@ def _grad_norm(params, device: str) -> float:
 
 def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtype, device: str) -> dict:
     mpo = build_mpo(model, dtype=dtype, device=device)
-    mps, camps = _make_initial_mps(model, method, dtype, device)
     if runtime.seed is not None:
         tc.manual_seed(int(runtime.seed))
+    mps, camps, init = _make_initial_mps(model, method, dtype, device)
     for p in mps.tensors:
         p.requires_grad_(True)
     params = list(mps.parameters())
@@ -203,56 +233,76 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
     history = []
     max_grad = 0.0
     max_forbidden_grad = 0.0
+    optimizer_steps = 0
+    closure_evals = 0
     t0 = time.perf_counter()
-    for sweep in range(method.sweeps):
-        opt_name = method.optimizer or "adam"
-        lr = float(method.lr if method.lr is not None else 0.01)
-        if opt_name == "adam":
-            opt = tc.optim.Adam(params, lr=lr)
-        elif opt_name == "lbfgs":
-            opt = tc.optim.LBFGS(
-                params,
-                lr=lr,
-                max_iter=int(method.lbfgs_iters or 5),
-                line_search_fn="strong_wolfe",
+    opt_name = method.optimizer or "adam"
+    lr = float(method.lr if method.lr is not None else 0.01)
+    if opt_name == "adam":
+        opt = tc.optim.Adam(params, lr=lr)
+    elif opt_name == "lbfgs":
+        opt = tc.optim.LBFGS(
+            params,
+            lr=lr,
+            max_iter=int(method.lbfgs_iters or 5),
+            tolerance_grad=float(method.lbfgs_tolerance_grad or 1e-7),
+            tolerance_change=float(method.lbfgs_tolerance_change or 1e-9),
+            line_search_fn="strong_wolfe",
+        )
+    else:
+        raise ValueError(f"unsupported optimizer {opt_name!r}")
+
+    initial_energy = _float(_energy(mps, mpo))
+    initial_bond_dims = _bond_dims(mps)
+    best_energy = initial_energy
+    best_step = 0
+    global_steps = int(method.global_steps or max(1, method.sweeps) * max(1, int(method.local_steps or 1)))
+
+    def closure():
+        nonlocal max_forbidden_grad, closure_evals
+        opt.zero_grad(set_to_none=True)
+        if camps is not None:
+            apply_charge_masks_(mps, camps.masks)
+        loss = _energy(mps, mpo) + _sector_penalty(model, method, mps).real
+        closure_evals += 1
+        loss.backward()
+        if camps is not None:
+            max_forbidden_grad = max(
+                max_forbidden_grad,
+                zero_forbidden_gradients_(params, camps.masks),
             )
+        if method.grad_clip is not None and method.grad_clip > 0:
+            tc.nn.utils.clip_grad_norm_(params, float(method.grad_clip))
+        return loss
+
+    for step in range(1, global_steps + 1):
+        if opt_name == "adam":
+            closure()
+            max_grad = max(max_grad, _grad_norm(params, mps.device))
+            opt.step()
         else:
-            raise ValueError(f"unsupported optimizer {opt_name!r}")
-
-        def closure():
-            opt.zero_grad(set_to_none=True)
-            if camps is not None:
-                apply_charge_masks_(mps, camps.masks)
-            loss = _energy(mps, mpo) + _sector_penalty(model, method, mps).real
-            loss.backward()
-            nonlocal max_forbidden_grad
-            if camps is not None:
-                max_forbidden_grad = max(
-                    max_forbidden_grad,
-                    zero_forbidden_gradients_(params, camps.masks),
-                )
-            return loss
-
-        steps = int(method.local_steps or 1)
-        for _ in range(max(1, steps)):
-            if opt_name == "adam":
-                closure()
-                max_grad = max(max_grad, _grad_norm(params, mps.device))
-                opt.step()
-            else:
-                opt.step(closure)
-                max_grad = max(max_grad, _grad_norm(params, mps.device))
-            if camps is not None:
-                apply_charge_masks_(mps, camps.masks)
+            opt.step(closure)
+            max_grad = max(max_grad, _grad_norm(params, mps.device))
+        optimizer_steps += 1
+        if camps is not None:
+            apply_charge_masks_(mps, camps.masks)
+        _project(mps, method.projection)
+        if camps is not None:
+            apply_charge_masks_(mps, camps.masks)
         energy = _float(_energy(mps, mpo))
+        if energy < best_energy:
+            best_energy = energy
+            best_step = step
         rec = {
-            "sweep": sweep,
+            "step": step,
+            "sweep": step - 1,
             "energy": energy,
             "energy_per_site": energy / model.N,
             "sector_report": _sector_report(model, mps),
             "bond_dims": _bond_dims(mps),
             "max_bond": _max_bond(mps),
             "gradient_norm": max_grad,
+            "state_norm": _float(K.native_norm(mps)),
         }
         if mode == "hard":
             rec["max_forbidden_abs"] = max_forbidden_abs(mps, camps.masks)
@@ -266,18 +316,116 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
             "final_energy": final_e,
             "final_energy_per_site": final_e / model.N,
             "final_max_bond": _max_bond(mps),
+            "initial_energy": initial_energy,
+            "initial_bond_dims": initial_bond_dims,
+            "final_bond_dims": _bond_dims(mps),
+            "chi_requested": method.chi,
+            "initial_max_bond": max(initial_bond_dims) if initial_bond_dims else 1,
             "final_gradient_norm": max_grad,
+            "best_energy": best_energy,
+            "best_step": best_step,
+            "global_steps": global_steps,
+            "optimizer_steps": optimizer_steps,
+            "closure_evals": closure_evals,
             "runtime": runtime_s,
         },
         "diagnostics": {
+            "algorithm_id": "ad_global",
+            "optimizer_path": "global_ad_hard_charge_mask" if mode == "hard" else (
+                "global_ad_with_sector_penalty" if mode == "soft" else "global_ad"
+            ),
             "ed_used": False,
             "classical_dmrg_used": False,
             "lanczos_used": False,
             "ad_used": True,
             "dense_hamiltonian_built": False,
             "sector_mode": mode,
+            "initialization": init,
+            "projection": method.projection,
+            "optimizer_reset": "never",
             "max_forbidden_abs": max_forbidden_abs(mps, camps.masks) if camps is not None else None,
             "max_forbidden_grad_abs": max_forbidden_grad if camps is not None else None,
+        },
+        "mps": mps,
+    }
+
+
+def _run_ad_two_site(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtype, device: str) -> dict:
+    mode = _sector_mode(model, method)
+    if mode != "none":
+        raise ValueError(
+            f"ad_two_site does not support sector_mode={mode!r}; use ad_global "
+            "for soft penalties or hard charge masks"
+        )
+    if runtime.seed is not None:
+        tc.manual_seed(int(runtime.seed))
+    mpo = build_mpo(model, dtype=dtype, device=device)
+    mps, _camps, init = _make_initial_mps(model, method, dtype, device)
+    initial_bond_dims = _bond_dims(mps)
+    t0 = time.perf_counter()
+    raw = train_ad_two_site(
+        mps,
+        mpo,
+        num_sweeps=method.sweeps,
+        local_steps=int(method.local_steps or 1),
+        lr=float(method.lr if method.lr is not None else 1.0),
+        optimizer=method.optimizer or "lbfgs",
+        lbfgs_iters=int(method.lbfgs_iters or 5),
+        lbfgs_tolerance_grad=float(method.lbfgs_tolerance_grad or 1e-12),
+        lbfgs_tolerance_change=float(method.lbfgs_tolerance_change or 1e-15),
+        max_bond_dim=method.chi,
+        precondition=method.two_site_precondition,
+        stabilization=method.post_step_stabilization,
+    )
+    runtime_s = time.perf_counter() - t0
+    history = []
+    for rec in raw["sweeps"]:
+        energy = float(rec["energy_after"])
+        history.append({
+            "sweep": rec["sweep"],
+            "direction": rec["direction"],
+            "energy": energy,
+            "energy_per_site": energy / model.N,
+            "sector_report": _sector_report(model, mps),
+            "bond_dims": raw["final_bond_dims"],
+            "max_bond": rec["max_bond"],
+            "max_trunc": rec["max_trunc"],
+        })
+    final_e = float(raw["final_energy"])
+    return {
+        "history": history,
+        "summary": {
+            "initial_energy": float(raw["initial_energy"]),
+            "final_energy": final_e,
+            "final_energy_per_site": final_e / model.N,
+            "final_max_bond": raw["max_bond"],
+            "initial_bond_dims": initial_bond_dims,
+            "final_bond_dims": raw["final_bond_dims"],
+            "chi_requested": method.chi,
+            "initial_max_bond": max(initial_bond_dims) if initial_bond_dims else 1,
+            "best_energy": min(raw["energy_history"]),
+            "best_step": raw["energy_history"].index(min(raw["energy_history"])),
+            "directional_sweeps": method.sweeps,
+            "local_steps_per_bond": int(method.local_steps or 1),
+            "optimizer_steps": raw["optimizer_steps"],
+            "closure_evals": raw["closure_evals"],
+            "runtime": runtime_s,
+        },
+        "diagnostics": {
+            "algorithm_id": "ad_two_site",
+            "optimizer_path": "two_site_ad_local_theta",
+            "ed_used": False,
+            "classical_dmrg_used": False,
+            "lanczos_used": False,
+            "ad_used": True,
+            "dense_hamiltonian_built": False,
+            "sector_mode": mode,
+            "initialization": init,
+            "projection": None,
+            "two_site_precondition": method.two_site_precondition,
+            "post_step_stabilization": method.post_step_stabilization,
+            "max_forbidden_abs": None,
+            "max_forbidden_grad_abs": None,
         },
         "mps": mps,
     }
@@ -400,8 +548,23 @@ def run_latticetn_job(
     if runtime.seed is not None:
         tc.manual_seed(int(runtime.seed))
 
+    alias_resolution = None
     if method.name == "ad_dmrg":
+        alias_resolution = {"requested": "ad_dmrg", "resolved": "ad_global"}
+        warnings.warn(
+            "Method 'ad_dmrg' is deprecated; use 'ad_global' or 'ad_two_site'. "
+            "The compatibility alias resolves to 'ad_global'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        data = method.to_dict()
+        data["name"] = "ad_global"
+        method = MethodConfig.from_dict(data)
+
+    if method.name == "ad_global":
         raw = _run_ad(model, method, runtime, dtype, device)
+    elif method.name == "ad_two_site":
+        raw = _run_ad_two_site(model, method, runtime, dtype, device)
     elif method.name == "dmrg":
         raw = _run_classical_dmrg(model, method, runtime, dtype, device)
     else:
@@ -420,8 +583,12 @@ def run_latticetn_job(
         diagnostics=raw["diagnostics"],
     )
     out = result.to_dict()
+    if alias_resolution is not None:
+        out["diagnostics"]["deprecated_alias_resolution"] = alias_resolution
+        out["method"]["deprecated_alias_resolution"] = alias_resolution
     if runtime.output:
-        result.write_json(runtime.output)
+        from .config_schema import write_json
+        write_json(out, runtime.output)
     return out
 
 
@@ -455,15 +622,28 @@ def namespace_from_legacy_ad_args(args: Namespace) -> tuple[ModelSpec, MethodCon
         "parameters": relevant,
         "sector": sector,
     })
+    cli_method = getattr(args, "method", "auto")
+    if cli_method == "auto":
+        method_name = "ad_two_site" if args.sector_mode == "none" else "ad_global"
+    else:
+        method_name = cli_method
     method = MethodConfig(
-        name="ad_dmrg",
+        name=method_name,
         chi=args.chi,
         sweeps=args.sweeps,
         optimizer=args.optimizer,
         local_steps=args.local_steps,
         lbfgs_iters=args.lbfgs_iters,
+        lbfgs_tolerance_grad=getattr(args, "lbfgs_tolerance_grad", None),
+        lbfgs_tolerance_change=getattr(args, "lbfgs_tolerance_change", None),
         lr=args.lr,
         sector_mode=args.sector_mode,
+        initialization=args.init,
+        projection=args.stabilization,
+        two_site_precondition=getattr(args, "precondition", "theta_norm"),
+        post_step_stabilization=args.stabilization,
+        grad_clip=args.grad_clip,
+        global_steps=(args.sweeps * args.local_steps if method_name == "ad_global" else None),
     )
     runtime = RuntimeConfig(
         device=args.device,

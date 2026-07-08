@@ -416,8 +416,9 @@ def run_ad_model_benchmark(args: argparse.Namespace) -> dict:
     print(f"model={legacy['model']} N={legacy['N']} chi={legacy['chi']} sweeps={legacy['sweeps']}")
     print(
         f"device={legacy['device']} dtype={legacy['dtype']} "
-        f"optimizer={legacy['optimizer']} init=stage10_schema"
+        f"optimizer={legacy['optimizer']} init={legacy['init']}"
     )
+    print(f"algorithm = {legacy['algorithm_id']} ({legacy['optimizer_path']})")
     print(f"sector mode = {legacy['sector_mode']}")
     print("ED status = skipped by design")
     print("classical DMRG/Lanczos = not used")
@@ -455,25 +456,43 @@ def _legacy_result_from_unified(unified: dict) -> dict:
     runtime = unified["runtime"]
     history = unified["sweep_history"]
     final_sector = history[-1].get("sector_report") if history else None
-    if method["sector_mode"] == "hard":
-        optimizer_path = "global_ad_hard_charge_mask"
-    elif method["sector_mode"] == "soft":
-        optimizer_path = "global_ad_with_sector_penalty"
-    else:
-        optimizer_path = "stage10_run_latticetn_job"
+    optimizer_path = diagnostics.get("optimizer_path", "unknown")
+    algorithm_id = diagnostics.get("algorithm_id", method["name"])
     return {
         "model": model["name"],
         "N": model["N"],
         "chi": method["chi"],
+        "chi_requested": method["chi"],
+        "initial_bond_dims": summary.get("initial_bond_dims"),
+        "initial_max_bond": summary.get("initial_max_bond"),
+        "final_bond_dims": summary.get("final_bond_dims"),
         "sweeps": method["sweeps"],
         "device": runtime["resolved_device"],
         "dtype": runtime["dtype"],
         "optimizer": method["optimizer"],
+        "algorithm_id": algorithm_id,
         "optimizer_path": optimizer_path,
+        "deprecated_alias_resolution": diagnostics.get("deprecated_alias_resolution"),
         "sector_mode": method["sector_mode"],
-        "init": "stage10_schema",
-        "initial_energy": history[0]["energy"] if history else summary["final_energy"],
-        "initial_energy_per_site": history[0]["energy_per_site"] if history else summary["final_energy_per_site"],
+        "init": method.get("initialization", diagnostics.get("initialization", "auto")),
+        "projection": method.get("projection"),
+        "stabilization": method.get("post_step_stabilization"),
+        "two_site_precondition": method.get("two_site_precondition"),
+        "grad_clip": method.get("grad_clip"),
+        "lr": method.get("lr"),
+        "lbfgs_tolerance_grad": method.get("lbfgs_tolerance_grad"),
+        "lbfgs_tolerance_change": method.get("lbfgs_tolerance_change"),
+        "global_steps": summary.get("global_steps"),
+        "directional_sweeps": summary.get("directional_sweeps"),
+        "local_steps_per_bond": summary.get("local_steps_per_bond"),
+        "optimizer_steps": summary.get("optimizer_steps"),
+        "closure_evals": summary.get("closure_evals"),
+        "best_energy": summary.get("best_energy"),
+        "best_step": summary.get("best_step"),
+        "initial_energy": summary.get("initial_energy", history[0]["energy"] if history else summary["final_energy"]),
+        "initial_energy_per_site": (
+            summary.get("initial_energy", history[0]["energy"] if history else summary["final_energy"]) / model["N"]
+        ),
         "initial_sector_report": history[0].get("sector_report") if history else None,
         "history": history,
         "final_energy": summary["final_energy"],
@@ -501,13 +520,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--N", type=int, required=True)
     p.add_argument("--chi", type=int, required=True)
     p.add_argument("--sweeps", type=int, default=1)
+    p.add_argument("--method", choices=["auto", "ad_two_site", "ad_global"], default="auto")
     p.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     p.add_argument("--dtype", choices=["complex64", "complex128"], default="complex128")
     p.add_argument("--init", choices=["auto", "neel", "random", "spinless_cdw", "hubbard_neel"], default="auto")
     p.add_argument("--optimizer", choices=["lbfgs", "adam"], default="adam")
     p.add_argument("--local-steps", type=int, default=1)
     p.add_argument("--lbfgs-iters", type=int, default=5)
+    p.add_argument("--lbfgs-tolerance-grad", type=float, default=None)
+    p.add_argument("--lbfgs-tolerance-change", type=float, default=None)
     p.add_argument("--lr", type=float, default=0.01)
+    p.add_argument("--precondition", choices=["theta_norm", "none"], default="theta_norm")
     p.add_argument("--stabilization", choices=["tensor_norm", "none"], default="none")
     p.add_argument("--grad-clip", type=float, default=None)
     p.add_argument("--sector-mode", choices=["none", "soft", "hard"], default="none")

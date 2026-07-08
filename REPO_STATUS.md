@@ -1,6 +1,6 @@
 # Repository Status
 
-Last updated: 2026-07-03 (Stage 7C spinful Hubbard chain via Jordan-Wigner)
+Last updated: 2026-07-07 (stabilization and semantic-integrity sprint)
 
 ## What this repository is
 
@@ -52,7 +52,13 @@ These implement the primary solver and its differentiable loss path:
 | `latticetn.contractions` | differentiable native contractions; `rayleigh_energy_native` = the loss. |
 | `latticetn.ad_variational` | **Stage 4R** global AD-MPS (`ADVariationalMPS`, `train_ad_mps`). |
 | `latticetn.ad_local` | **Stage 5A** AD local-tensor optimization (`ADLocalOptimizer`, `train_ad_local`). |
-| `latticetn.ad_two_site` | **Stage 5B** two-site AD local-tensor optimization (`ADTwoSiteOptimizer`, `train_ad_two_site`); optional bond growth via post-step SVD split. |
+| `latticetn.ad_two_site` | **Stage 5B** two-site AD local-tensor optimization (`ADTwoSiteOptimizer`, `train_ad_two_site`); pre-optimization `Theta` normalization plus optional bond growth via post-step SVD split. |
+
+Stage 10 runner method identities are now explicit: `ad_global`,
+`ad_two_site`, and `dmrg`. The legacy `ad_dmrg` string is a deprecated
+compatibility alias to `ad_global` and should not be used in new configs.
+Stage 11 expansion is paused during the stabilization sprint; large-N
+few-step records are smoke/integration evidence, not convergence evidence.
 
 Loss-path cleanliness (no `detach`/`.data`/`no_grad`/unnecessary `.item`, no
 `eigh`/`svd`/`qr`, no `dmrg`/`lanczos`) is AST-enforced by

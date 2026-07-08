@@ -16,8 +16,17 @@ class MethodConfig:
     optimizer: str | None = None
     local_steps: int | None = None
     lbfgs_iters: int | None = None
+    lbfgs_tolerance_grad: float | None = None
+    lbfgs_tolerance_change: float | None = None
     lr: float | None = None
     sector_mode: str = "none"
+    initialization: str = "auto"
+    projection: str = "tensor_norm"
+    two_site_precondition: str = "theta_norm"
+    post_step_stabilization: str = "none"
+    grad_clip: float | None = None
+    global_steps: int | None = None
+    optimizer_reset: str = "never"
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "MethodConfig":
@@ -28,8 +37,17 @@ class MethodConfig:
             optimizer=data.get("optimizer"),
             local_steps=data.get("local_steps"),
             lbfgs_iters=data.get("lbfgs_iters"),
+            lbfgs_tolerance_grad=data.get("lbfgs_tolerance_grad"),
+            lbfgs_tolerance_change=data.get("lbfgs_tolerance_change"),
             lr=data.get("lr"),
             sector_mode=str(data.get("sector_mode", "none")),
+            initialization=str(data.get("initialization", data.get("init", "auto"))),
+            projection=str(data.get("projection", data.get("stabilization", "tensor_norm"))),
+            two_site_precondition=str(data.get("two_site_precondition", "theta_norm")),
+            post_step_stabilization=str(data.get("post_step_stabilization", data.get("stabilization", "none"))),
+            grad_clip=data.get("grad_clip"),
+            global_steps=data.get("global_steps"),
+            optimizer_reset=str(data.get("optimizer_reset", "never")),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -40,8 +58,17 @@ class MethodConfig:
             "optimizer": self.optimizer,
             "local_steps": self.local_steps,
             "lbfgs_iters": self.lbfgs_iters,
+            "lbfgs_tolerance_grad": self.lbfgs_tolerance_grad,
+            "lbfgs_tolerance_change": self.lbfgs_tolerance_change,
             "lr": self.lr,
             "sector_mode": self.sector_mode,
+            "initialization": self.initialization,
+            "projection": self.projection,
+            "two_site_precondition": self.two_site_precondition,
+            "post_step_stabilization": self.post_step_stabilization,
+            "grad_clip": self.grad_clip,
+            "global_steps": self.global_steps,
+            "optimizer_reset": self.optimizer_reset,
         }
 
 

@@ -238,6 +238,41 @@ def _charge_index(charges: Sequence, charge) -> int:
         raise ValueError(f"charge {charge!r} is not present in bond sectors {charges!r}") from exc
 
 
+def _preserve_required_path(bond_charges, required, chi: int | None, label: str) -> None:
+    """Ensure a requested product-state charge path survives chi trimming."""
+
+    for i, charge in enumerate(required):
+        charges = list(bond_charges[i].charges)
+        if charge in charges:
+            continue
+        if chi is not None and chi <= 0:
+            raise ValueError(f"chi must be positive when provided, got {chi}")
+        if chi is not None and len(charges) >= chi and chi < 1:
+            raise ValueError(
+                f"chi={chi} cannot represent requested {label} initialization "
+                f"path at bond {i}; required charge {charge!r}"
+            )
+        if len(charges) == 0:
+            raise ValueError(
+                f"no charge sectors remain at bond {i}; cannot represent "
+                f"requested {label} initialization path"
+            )
+        if chi is not None and len(charges) >= chi:
+            charges[-1] = charge
+        else:
+            charges.append(charge)
+        try:
+            bond_charges[i].charges = sorted(set(charges))
+        except TypeError:
+            bond_charges[i].charges = sorted(set(charges), key=lambda q: (q[0], q[1]))
+        if chi is not None and len(bond_charges[i].charges) > chi:
+            raise ValueError(
+                f"chi={chi} cannot represent requested {label} initialization "
+                f"path at bond {i}; required charge {charge!r} is absent from "
+                "the trimmed sectors"
+            )
+
+
 def _make_masked_random_tensors(
     masks: Sequence[tc.Tensor],
     dtype,
@@ -269,8 +304,14 @@ def spinless_hard_sector_product_mps(
     device = "cpu" if device is None else device
     dtype = tc.complex128 if dtype is None else dtype
     bonds = build_spinless_bond_sectors(N, target_n, chi=chi)
-    masks = build_spinless_masks(bonds, device=device)
     occupied = _choose_spinless_sites(N, target_n, pattern)
+    required = [0]
+    q_req = 0
+    for i in range(N):
+        q_req += 1 if i in occupied else 0
+        required.append(q_req)
+    _preserve_required_path(bonds, required, chi, "spinless hard-sector")
+    masks = build_spinless_masks(bonds, device=device)
     tensors = _make_masked_random_tensors(masks, dtype=dtype, device=device)
     q = 0
     for i, tensor in enumerate(tensors):
@@ -305,8 +346,15 @@ def hubbard_hard_sector_product_mps(
     device = "cpu" if device is None else device
     dtype = tc.complex128 if dtype is None else dtype
     bonds = build_hubbard_bond_sectors(N, target_nup, target_ndown, chi=chi)
-    masks = build_hubbard_masks(bonds, device=device)
     up_sites, down_sites = _choose_hubbard_sets(N, target_nup, target_ndown, pattern)
+    required = [(0, 0)]
+    q_req = (0, 0)
+    for i in range(N):
+        dq = (1 if i in up_sites else 0, 1 if i in down_sites else 0)
+        q_req = (q_req[0] + dq[0], q_req[1] + dq[1])
+        required.append(q_req)
+    _preserve_required_path(bonds, required, chi, "Hubbard hard-sector")
+    masks = build_hubbard_masks(bonds, device=device)
     tensors = _make_masked_random_tensors(masks, dtype=dtype, device=device)
     q = (0, 0)
     for i, tensor in enumerate(tensors):
