@@ -21,6 +21,8 @@ from .charge_sectors import (
     apply_charge_masks_,
     zero_forbidden_gradients_,
     max_forbidden_abs,
+    sector_normalize_center,
+    sector_canonical_residual,
 )
 from .sector_observables import (
     total_particle_number,
@@ -34,6 +36,7 @@ from .fermion_operators import hubbard_local_operators
 from . import contractions as K
 from .ad_two_site import train_ad_two_site
 from .ad_variational import _project
+from . import canonical as Can
 
 
 def parse_dtype(name: str) -> tc.dtype:
@@ -221,6 +224,43 @@ def _grad_norm(params, device: str) -> float:
     return float(sq.sqrt().cpu()) if seen else 0.0
 
 
+def _write_mps_tensors_(target: MPS, source: MPS) -> None:
+    """Copy a detached gauge representative onto live Parameter leaves."""
+    if len(target.tensors) != len(source.tensors):
+        raise ValueError("canonicalization changed the MPS site count")
+    with tc.no_grad():
+        for dst, src in zip(target.tensors, source.tensors):
+            if dst.shape != src.shape:
+                raise ValueError(
+                    f"exact canonicalization changed tensor shape {tuple(dst.shape)} -> {tuple(src.shape)}")
+            dst.copy_(src.to(dtype=dst.dtype, device=dst.device))
+
+
+def _canonical_retract_(mps: MPS, camps: ChargeAwareMPS | None, projection: str,
+                        method: str = "qr", normalize: bool = True) -> float:
+    """Apply an exact no-grad gauge retraction and return its residual."""
+    if projection == "sector_canonical":
+        if camps is None:
+            raise ValueError("projection='sector_canonical' requires sector_mode='hard'")
+        if method != "qr":
+            raise ValueError("hard-sector canonicalization currently supports method='qr' only")
+        source = sector_normalize_center(camps, center=mps.N - 1) if normalize else camps
+        _write_mps_tensors_(mps, source.mps)
+        apply_charge_masks_(mps, camps.masks)
+        return sector_canonical_residual(source, center=mps.N - 1)
+    if projection == "canonical":
+        if camps is not None:
+            raise ValueError(
+                "ordinary dense canonicalization is forbidden for hard-sector MPS; "
+                "use projection='sector_canonical'")
+        source = Can.left_canonicalize(mps, method=method)
+        if normalize:
+            source = Can.normalize_center(source, center=mps.N - 1)
+        _write_mps_tensors_(mps, source)
+        return Can.canonical_residual(source, center=mps.N - 1)
+    raise ValueError(f"not a canonical projection: {projection!r}")
+
+
 def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtype, device: str) -> dict:
     mpo = build_mpo(model, dtype=dtype, device=device)
     if runtime.seed is not None:
@@ -228,8 +268,16 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
     mps, camps, init = _make_initial_mps(model, method, dtype, device)
     for p in mps.tensors:
         p.requires_grad_(True)
-    params = list(mps.parameters())
     mode = _sector_mode(model, method)
+    if method.canonical_interval < 1:
+        raise ValueError("canonical_interval must be >= 1")
+    if not method.normalize_final_state:
+        raise ValueError("Global AD physical outputs require normalize_final_state=True")
+    if method.projection == "sector_canonical" and mode != "hard":
+        raise ValueError("projection='sector_canonical' requires sector_mode='hard'")
+    if method.projection == "canonical" and mode == "hard":
+        raise ValueError("hard-sector Global AD must use 'sector_canonical', not dense 'canonical'")
+    params = list(mps.parameters())
     history = []
     max_grad = 0.0
     max_forbidden_grad = 0.0
@@ -238,19 +286,23 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
     t0 = time.perf_counter()
     opt_name = method.optimizer or "adam"
     lr = float(method.lr if method.lr is not None else 0.01)
-    if opt_name == "adam":
-        opt = tc.optim.Adam(params, lr=lr)
-    elif opt_name == "lbfgs":
-        opt = tc.optim.LBFGS(
-            params,
-            lr=lr,
-            max_iter=int(method.lbfgs_iters or 5),
-            tolerance_grad=float(method.lbfgs_tolerance_grad or 1e-7),
-            tolerance_change=float(method.lbfgs_tolerance_change or 1e-9),
-            line_search_fn="strong_wolfe",
-        )
-    else:
+    def build_optimizer():
+        if opt_name == "adam":
+            return tc.optim.Adam(params, lr=lr)
+        if opt_name == "lbfgs":
+            return tc.optim.LBFGS(
+                params,
+                lr=lr,
+                max_iter=int(method.lbfgs_iters or 5),
+                tolerance_grad=float(method.lbfgs_tolerance_grad or 1e-7),
+                tolerance_change=float(method.lbfgs_tolerance_change or 1e-9),
+                line_search_fn="strong_wolfe",
+            )
         raise ValueError(f"unsupported optimizer {opt_name!r}")
+
+    opt = build_optimizer()
+    optimizer_reset_events: list[int] = []
+    projection_events: list[dict] = []
 
     initial_energy = _float(_energy(mps, mpo))
     initial_bond_dims = _bond_dims(mps)
@@ -286,7 +338,33 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
         optimizer_steps += 1
         if camps is not None:
             apply_charge_masks_(mps, camps.masks)
-        _project(mps, method.projection)
+        if method.projection == "tensor_norm":
+            _project(mps, "tensor_norm")
+        elif method.projection == "none":
+            _project(mps, "none")
+        elif method.projection in {"canonical", "sector_canonical"} and step % method.canonical_interval == 0:
+            raw_norm = _float(K.native_norm(mps))
+            # Preserve the established projection hook/API for ordinary dense
+            # canonical mode. The Stage 12A helper below additionally performs
+            # center normalization and records the exact retraction metadata.
+            if method.projection == "canonical":
+                _project(mps, "canonical")
+            residual = _canonical_retract_(
+                mps, camps, method.projection,
+                method=method.canonicalization_method, normalize=True,
+            )
+            projection_events.append({
+                "step": step,
+                "raw_norm_before_projection": raw_norm,
+                "physical_norm_after_projection": _float(K.native_norm(mps)),
+                "canonical_residual": residual,
+            })
+            if method.reset_optimizer_on_canonicalize:
+                opt = build_optimizer()
+                optimizer_reset_events.append(step)
+        elif method.projection not in {"none", "canonical", "sector_canonical"}:
+            raise ValueError(
+                "projection must be 'none'|'tensor_norm'|'canonical'|'sector_canonical'")
         if camps is not None:
             apply_charge_masks_(mps, camps.masks)
         energy = _float(_energy(mps, mpo))
@@ -308,8 +386,31 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
             rec["max_forbidden_abs"] = max_forbidden_abs(mps, camps.masks)
             rec["max_forbidden_grad_abs"] = max_forbidden_grad
         history.append(rec)
+    raw_norm_before_projection = _float(K.native_norm(mps))
+    energy_before_final_projection = _float(_energy(mps, mpo))
+    final_projection = "sector_canonical" if camps is not None else "canonical"
+    final_canonical_residual = _canonical_retract_(
+        mps, camps, final_projection,
+        method=method.canonicalization_method, normalize=True,
+    )
+    physical_norm_after_projection = _float(K.native_norm(mps))
+    final_e = _float(_energy(mps, mpo))
+    tol = 1e-10 if dtype == tc.complex128 else 2e-5
+    if abs(final_e - energy_before_final_projection) > tol:
+        raise RuntimeError(
+            "final canonical normalization changed Rayleigh energy by "
+            f"{abs(final_e - energy_before_final_projection):.3e} > {tol:.3e}")
+    if abs(physical_norm_after_projection - 1.0) > tol:
+        raise RuntimeError(
+            f"final physical MPS norm is {physical_norm_after_projection}, expected 1")
+    if camps is not None and max_forbidden_abs(mps, camps.masks) != 0.0:
+        raise RuntimeError("final hard-sector canonicalization produced forbidden amplitudes")
+    if history:
+        history[-1]["raw_norm_before_final_projection"] = raw_norm_before_projection
+        history[-1]["state_norm"] = physical_norm_after_projection
+        history[-1]["energy"] = final_e
+        history[-1]["canonical_residual"] = final_canonical_residual
     runtime_s = time.perf_counter() - t0
-    final_e = history[-1]["energy"] if history else _float(_energy(mps, mpo))
     return {
         "history": history,
         "summary": {
@@ -328,6 +429,10 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
             "optimizer_steps": optimizer_steps,
             "closure_evals": closure_evals,
             "runtime": runtime_s,
+            "raw_norm_before_projection": raw_norm_before_projection,
+            "physical_norm_after_projection": physical_norm_after_projection,
+            "canonical_residual": final_canonical_residual,
+            "optimizer_reset_events": optimizer_reset_events,
         },
         "diagnostics": {
             "algorithm_id": "ad_global",
@@ -342,7 +447,16 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
             "sector_mode": mode,
             "initialization": init,
             "projection": method.projection,
-            "optimizer_reset": "never",
+            "canonical_interval": method.canonical_interval,
+            "canonicalization_method": method.canonicalization_method,
+            "normalize_final_state": method.normalize_final_state,
+            "reset_optimizer_on_canonicalize": method.reset_optimizer_on_canonicalize,
+            "optimizer_reset": "on_canonicalize" if method.reset_optimizer_on_canonicalize else "never",
+            "optimizer_reset_events": optimizer_reset_events,
+            "projection_events": projection_events,
+            "raw_norm_before_projection": raw_norm_before_projection,
+            "physical_norm_after_projection": physical_norm_after_projection,
+            "canonical_residual": final_canonical_residual,
             "max_forbidden_abs": max_forbidden_abs(mps, camps.masks) if camps is not None else None,
             "max_forbidden_grad_abs": max_forbidden_grad if camps is not None else None,
         },
@@ -586,6 +700,10 @@ def run_latticetn_job(
     if alias_resolution is not None:
         out["diagnostics"]["deprecated_alias_resolution"] = alias_resolution
         out["method"]["deprecated_alias_resolution"] = alias_resolution
+        # Preserve the user-requested compatibility name in serialized config
+        # while diagnostics state the algorithm that actually executed.
+        out["method"]["name"] = alias_resolution["requested"]
+        out["method"]["resolved_name"] = alias_resolution["resolved"]
     if runtime.output:
         from .config_schema import write_json
         write_json(out, runtime.output)
@@ -644,6 +762,10 @@ def namespace_from_legacy_ad_args(args: Namespace) -> tuple[ModelSpec, MethodCon
         post_step_stabilization=args.stabilization,
         grad_clip=args.grad_clip,
         global_steps=(args.sweeps * args.local_steps if method_name == "ad_global" else None),
+        canonical_interval=getattr(args, "canonical_interval", 1),
+        normalize_final_state=getattr(args, "normalize_final_state", True),
+        reset_optimizer_on_canonicalize=getattr(args, "reset_optimizer_on_canonicalize", True),
+        canonicalization_method=getattr(args, "canonicalization_method", "qr"),
     )
     runtime = RuntimeConfig(
         device=args.device,

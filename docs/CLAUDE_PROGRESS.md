@@ -1535,6 +1535,122 @@ Continue only with bounded CPU-small evidence, or request explicit resource
 bounds for production-depth convergence/literature trend jobs before claiming
 Stage 11 completion.
 
+## Checkpoint Stage 12A-01: Exact Dense Canonical Retraction Primitives
+
+Goal:
+Add the exact dense-MPS canonicalization API required for gauge-retracted AD.
+
+Files changed:
+- `latticetn/canonical.py`
+- `tests/test_stage12a_dense_canonical.py`
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe -m pytest -q tests/test_stage12a_dense_canonical.py`
+
+Result:
+- 5 passed (including the later periodic-retraction stability control).
+- Exact QR and non-truncating SVD left sweeps preserve the normalized dense
+  state and TFI Rayleigh energy to `1e-12`.
+- Mixed canonicalization has residual below `1e-12`; center normalization
+  produces physical norm one.
+- The truncated-SVD negative control changes both state and energy.
+- An AD update followed by exact canonicalization preserves the AD-updated
+  physical state.
+
+Current failing test or bottleneck:
+- Dense primitives pass; charge-block canonicalization is not implemented yet.
+
+Next action:
+Implement blockwise QR using virtual charge labels and verify spinless and
+Hubbard masks, sectors, state, norm, and energy.
+
+## Checkpoint Stage 12A-02: Charge-Block Retraction and Global AD Integration
+
+Goal:
+Implement hard-sector canonicalization and make every accepted Global AD state
+a canonical unit-norm physical output.
+
+Files changed:
+- `latticetn/charge_sectors.py`
+- `latticetn/config_schema.py`
+- `latticetn/runner.py`
+- `latticetn/ad_variational.py`
+- `scripts/run_ad_model_benchmark.py`
+- `tests/test_stage12a_sector_canonical.py`
+- `tests/test_stage12a_runner.py`
+- `standalone_stage12a_gauge_retraction_test.py`
+- `docs/STAGE12A_GAUGE_RETRACTION_REPORT.md`
+- `docs/NUMERICAL_REPORT.md`
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe -m pytest -q tests/test_stage12a_sector_canonical.py`
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe -m pytest -q tests/test_stage12a_runner.py`
+- Combined Stage 12A/canonical/runner CPU regression selection (`-k "not cuda"`)
+- CLI and hard-sector CPU regression selection (`-k "not cuda"`)
+- Existing Global AD optimizer/gauge regression selection
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe standalone_stage12a_gauge_retraction_test.py --N 4 --chi 4 --steps 5 --interval 2`
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe scripts/validation_score.py --fast`
+
+Result:
+- Charge-block tests: 3 passed.
+- Runner semantics/metadata tests: 4 passed (including hard-sector dense-QR rejection).
+- Combined Stage 12A and relevant CPU regressions: 29 passed after the added controls.
+- CLI/hard-sector CPU regressions: 6 passed.
+- Existing Global AD optimizer/gauge regressions: 13 passed.
+- Fast validation: Score PASS, exit code 0.
+- Exact hard-sector QR preserves spinless `N` and Hubbard `(N_up,N_down)`,
+  physical state, energy, and forbidden zeros.
+- Final Global AD outputs are canonicalized, center-normalized, checked for
+  energy invariance and norm one, and used by observables/result serialization.
+- Result metadata distinguishes raw internal norm from final physical norm and
+  records retraction/reset events.
+
+Current failing test or bottleneck:
+- Two CUDA-marked regression tests cannot execute in the local validation
+  environment: Torch reports CUDA available but raises
+  `cudaErrorNoKernelImageForDevice`. CPU Stage 12A and required fast validation
+  pass.
+- There is no reusable MPS checkpoint serializer in the repository; future
+  checkpoint support must call the physical-output finalizer before writing.
+
+Next action:
+Run the documented manual `N=80` spinless and `N=40` Hubbard A/B commands only
+with explicit resource approval. Stage 12B differentiable canonicalization
+remains deferred.
+
+## Checkpoint Stage 12A-03: Broad CPU Compatibility and Final Score
+
+Goal:
+Check cross-stage compatibility and confirm the required stopping condition.
+
+Files changed:
+- `latticetn/runner.py`
+- `docs/STAGE12A_GAUGE_RETRACTION_REPORT.md`
+- `docs/CLAUDE_PROGRESS.md`
+
+Commands run:
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe -m pytest -q -k "not cuda and not gpu"`
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe -m pytest -q --lf -k "not cuda and not gpu"`
+- `C:\Apps\Miniforge3\envs\agent-env\python.exe scripts/validation_score.py --fast`
+
+Result:
+- The broad CPU run exposed three compatibility assertions: two projection-hook
+  expectations and one deprecated alias serialization expectation.
+- Projection hooks now remain observable at the configured event cadence, and
+  serialized deprecated jobs preserve requested `ad_dmrg` while reporting
+  resolved `ad_global` explicitly.
+- Previously failing selection: 8 passed.
+- Final required fast validation: Score PASS, exit code 0.
+
+Current failing test or bottleneck:
+- No known CPU Stage 12A or fast-validation failure.
+- CUDA remains unavailable for execution because of the local binary/GPU
+  architecture mismatch; no GPU work is required by Stage 12A acceptance.
+
+Next action:
+Stage 12A implementation is complete. Keep Stage 12B and production-depth A/B
+benchmarks deferred until explicitly requested.
+
 ## Checkpoint Stabilization-01: Method Identity and Conditioning Repair
 
 Goal:

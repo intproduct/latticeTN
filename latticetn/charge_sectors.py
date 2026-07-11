@@ -15,6 +15,7 @@ import torch as tc
 from .charges import spinless_charge_metadata, hubbard_charge_metadata
 from .initial_states import _choose_spinless_sites, _choose_hubbard_sets
 from .mps import MPS
+from .canonical import canonical_residual
 
 
 SpinlessCharge = int
@@ -231,6 +232,145 @@ def max_forbidden_abs(mps_or_tensors, masks: Sequence[tc.Tensor]) -> float:
     return max_abs
 
 
+def _local_charges_for(camps: ChargeAwareMPS):
+    if camps.model == "spinless_tv":
+        return list(spinless_charge_metadata()["n"])
+    if camps.model == "hubbard":
+        meta = hubbard_charge_metadata()
+        return list(zip(meta["n_up"], meta["n_down"]))
+    raise ValueError(f"unsupported charge-aware model {camps.model!r}")
+
+
+def _charge_add(left, local):
+    if isinstance(left, tuple):
+        return tuple(a + b for a, b in zip(left, local))
+    return left + local
+
+
+def _copy_charge_aware(camps: ChargeAwareMPS, tensors: Sequence[tc.Tensor]) -> ChargeAwareMPS:
+    mps = MPS.from_tensors(tensors, dtype=camps.mps.dtype, device=camps.mps.device,
+                           requires_grad=False)
+    out = ChargeAwareMPS(
+        mps=mps,
+        masks=[mask.clone() for mask in camps.masks],
+        bond_charges=camps.bond_charges,
+        model=camps.model,
+        target_sector=dict(camps.target_sector),
+        split_strategy=camps.split_strategy,
+    )
+    apply_charge_masks_(out.mps, out.masks)
+    return out
+
+
+def sector_left_canonicalize(camps: ChargeAwareMPS) -> ChargeAwareMPS:
+    """Exact left QR sweep that never mixes distinct virtual charges."""
+    tensors = [t.detach().clone() for t in camps.tensors]
+    local_charges = _local_charges_for(camps)
+    with tc.no_grad():
+        for i in range(len(tensors) - 1):
+            l, d, r = tensors[i].shape
+            mat = tensors[i].reshape(l * d, r)
+            qleft = camps.bond_charges[i].charges
+            qright = camps.bond_charges[i + 1].charges
+            qmat = tc.zeros_like(mat)
+            residual = tc.zeros((r, r), dtype=mat.dtype, device=mat.device)
+            for charge in dict.fromkeys(qright):
+                cols = [b for b, q in enumerate(qright) if q == charge]
+                rows = [a * d + s for a, ql in enumerate(qleft)
+                        for s, qs in enumerate(local_charges)
+                        if _charge_add(ql, qs) == charge]
+                if not cols:
+                    continue
+                block = mat[rows][:, cols]
+                q, rr = tc.linalg.qr(block, mode="reduced")
+                if q.shape[1] != len(cols):
+                    raise ValueError(
+                        f"charge block {charge!r} is rank-shape deficient: "
+                        f"{len(rows)} rows for {len(cols)} virtual channels")
+                qmat[tc.tensor(rows, device=mat.device)[:, None],
+                     tc.tensor(cols, device=mat.device)[None, :]] = q
+                residual[tc.tensor(cols, device=mat.device)[:, None],
+                         tc.tensor(cols, device=mat.device)[None, :]] = rr
+            tensors[i] = qmat.reshape(l, d, r)
+            tensors[i + 1] = tc.einsum("ab,bsd->asd", residual, tensors[i + 1])
+    return _copy_charge_aware(camps, tensors)
+
+
+def sector_mixed_canonicalize(camps: ChargeAwareMPS, center: int) -> ChargeAwareMPS:
+    """Exact charge-block mixed-canonical QR retraction."""
+    if not (0 <= center < camps.mps.N):
+        raise ValueError(f"center {center} out of range for N={camps.mps.N}")
+    tensors = [t.detach().clone() for t in camps.tensors]
+    local_charges = _local_charges_for(camps)
+    # Reuse the left block algorithm on the requested prefix.
+    prefix = _copy_charge_aware(camps, tensors)
+    if center:
+        # Inline a bounded left sweep so sites to the right of center remain available.
+        with tc.no_grad():
+            for i in range(center):
+                l, d, r = tensors[i].shape
+                mat = tensors[i].reshape(l * d, r)
+                qleft = camps.bond_charges[i].charges
+                qright = camps.bond_charges[i + 1].charges
+                qmat = tc.zeros_like(mat)
+                residual = tc.zeros((r, r), dtype=mat.dtype, device=mat.device)
+                for charge in dict.fromkeys(qright):
+                    cols = [b for b, q in enumerate(qright) if q == charge]
+                    rows = [a * d + s for a, ql in enumerate(qleft)
+                            for s, qs in enumerate(local_charges)
+                            if _charge_add(ql, qs) == charge]
+                    block = mat[rows][:, cols]
+                    q, rr = tc.linalg.qr(block, mode="reduced")
+                    if q.shape[1] != len(cols):
+                        raise ValueError(f"charge block {charge!r} is rank-shape deficient")
+                    qmat[tc.tensor(rows, device=mat.device)[:, None], tc.tensor(cols, device=mat.device)[None, :]] = q
+                    residual[tc.tensor(cols, device=mat.device)[:, None], tc.tensor(cols, device=mat.device)[None, :]] = rr
+                tensors[i] = qmat.reshape(l, d, r)
+                tensors[i + 1] = tc.einsum("ab,bsd->asd", residual, tensors[i + 1])
+    with tc.no_grad():
+        for i in range(len(tensors) - 1, center, -1):
+            l, d, r = tensors[i].shape
+            mat = tensors[i].reshape(l, d * r)
+            qleft = camps.bond_charges[i].charges
+            qright = camps.bond_charges[i + 1].charges
+            bmat = tc.zeros_like(mat)
+            residual = tc.zeros((l, l), dtype=mat.dtype, device=mat.device)
+            for charge in dict.fromkeys(qleft):
+                rows = [a for a, q in enumerate(qleft) if q == charge]
+                cols = [s * r + b for s, qs in enumerate(local_charges)
+                        for b, qr in enumerate(qright)
+                        if _charge_add(charge, qs) == qr]
+                block = mat[rows][:, cols]
+                qt, rr = tc.linalg.qr(block.t(), mode="reduced")
+                if qt.shape[1] != len(rows):
+                    raise ValueError(f"charge block {charge!r} is rank-shape deficient")
+                b = qt.t()
+                c = rr.t()
+                bmat[tc.tensor(rows, device=mat.device)[:, None], tc.tensor(cols, device=mat.device)[None, :]] = b
+                residual[tc.tensor(rows, device=mat.device)[:, None], tc.tensor(rows, device=mat.device)[None, :]] = c
+            tensors[i] = bmat.reshape(l, d, r)
+            tensors[i - 1] = tc.einsum("asd,db->asb", tensors[i - 1], residual)
+    return _copy_charge_aware(prefix, tensors)
+
+
+def sector_normalize_center(camps: ChargeAwareMPS, center: int | None = None) -> ChargeAwareMPS:
+    """Charge-preserving mixed canonicalization followed by center normalization."""
+    if center is None:
+        center = camps.mps.N - 1
+    out = sector_mixed_canonicalize(camps, center)
+    with tc.no_grad():
+        norm = out.tensors[center].norm()
+        if not bool(tc.isfinite(norm)) or float(norm) == 0.0:
+            raise ValueError(f"cannot normalize charge-sector center with norm {float(norm)!r}")
+        out.tensors[center].div_(norm)
+    return out
+
+
+def sector_canonical_residual(camps: ChargeAwareMPS, center: int | None = None) -> float:
+    """Mixed-canonical residual for a charge-aware MPS."""
+    return canonical_residual(camps.mps, center=center)
+
+
 def _charge_index(charges: Sequence, charge) -> int:
     try:
         return list(charges).index(charge)
@@ -396,6 +536,10 @@ __all__ = [
     "apply_charge_masks_",
     "zero_forbidden_gradients_",
     "max_forbidden_abs",
+    "sector_left_canonicalize",
+    "sector_mixed_canonicalize",
+    "sector_normalize_center",
+    "sector_canonical_residual",
     "spinless_hard_sector_product_mps",
     "hubbard_hard_sector_product_mps",
 ]

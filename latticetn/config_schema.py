@@ -27,6 +27,10 @@ class MethodConfig:
     grad_clip: float | None = None
     global_steps: int | None = None
     optimizer_reset: str = "never"
+    canonical_interval: int = 1
+    normalize_final_state: bool = True
+    reset_optimizer_on_canonicalize: bool = True
+    canonicalization_method: str = "qr"
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "MethodConfig":
@@ -48,6 +52,10 @@ class MethodConfig:
             grad_clip=data.get("grad_clip"),
             global_steps=data.get("global_steps"),
             optimizer_reset=str(data.get("optimizer_reset", "never")),
+            canonical_interval=int(data.get("canonical_interval", 1)),
+            normalize_final_state=bool(data.get("normalize_final_state", True)),
+            reset_optimizer_on_canonicalize=bool(data.get("reset_optimizer_on_canonicalize", True)),
+            canonicalization_method=str(data.get("canonicalization_method", "qr")),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -69,6 +77,10 @@ class MethodConfig:
             "grad_clip": self.grad_clip,
             "global_steps": self.global_steps,
             "optimizer_reset": self.optimizer_reset,
+            "canonical_interval": self.canonical_interval,
+            "normalize_final_state": self.normalize_final_state,
+            "reset_optimizer_on_canonicalize": self.reset_optimizer_on_canonicalize,
+            "canonicalization_method": self.canonicalization_method,
         }
 
 

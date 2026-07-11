@@ -117,3 +117,17 @@ python scripts/validation_score.py --full    # exit 0
   `H = -J Sz Sz - h Sx`, the critical transverse field is `h_c = J/2`).
 - **Higher spin**: generalize `spin_operators` (already parameterized by
   dimension) and the MPO generator; the contraction code is spin-agnostic.
+# Stage 12A canonical-output validation
+
+The gauge-retracted Global AD extension is documented in
+`docs/STAGE12A_GAUGE_RETRACTION_REPORT.md`. Its focused CPU tests verify exact
+dense and charge-block state/energy invariance, unit final physical norm,
+canonical residual, hard-sector preservation, explicit optimizer resets, and
+raw-versus-physical norm metadata.
+
+| Stage 12A check | Result | Command |
+|---|---|---|
+| Dense exact QR/SVD, periodic stability, and negative truncation control | PASS (5 passed) | `python -m pytest -q tests/test_stage12a_dense_canonical.py` |
+| Spinless/Hubbard blockwise QR | PASS (3 passed) | `python -m pytest -q tests/test_stage12a_sector_canonical.py` |
+| Global AD cadence/reset/output metadata and hard-sector dense-QR rejection | PASS (4 passed) | `python -m pytest -q tests/test_stage12a_runner.py` |
+| Repository fast validation | PASS | `python scripts/validation_score.py --fast` |

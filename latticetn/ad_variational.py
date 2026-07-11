@@ -177,7 +177,11 @@ def train_ad_mps(admps: ADVariationalMPS, num_steps: int = 200, lr: float = 1e-2
                  lbfgs_iters: int = 20,
                  projection: Literal["none", "tensor_norm", "canonical"] = "tensor_norm",
                  renormalize: bool | None = None,
-                 record_every: int = 1, verbose: bool = False
+                 record_every: int = 1, verbose: bool = False,
+                 canonical_interval: int = 100,
+                 normalize_final_state: bool = True,
+                 reset_optimizer_on_canonicalize: bool = True,
+                 canonicalization_method: Literal["qr", "svd"] = "qr",
                  ) -> dict:
     """Train an ADVariationalMPS by gradient descent on the Rayleigh quotient.
 
@@ -205,14 +209,22 @@ def train_ad_mps(admps: ADVariationalMPS, num_steps: int = 200, lr: float = 1e-2
     if renormalize is not None:
         projection = "tensor_norm" if renormalize else "none"
 
+    if canonical_interval < 1:
+        raise ValueError("canonical_interval must be >= 1")
+    if not normalize_final_state:
+        raise ValueError("accepted Global AD states require normalize_final_state=True")
     params = list(admps.parameters())
-    if optimizer == "adam":
-        opt = tc.optim.Adam(params, lr=lr)
-    elif optimizer == "lbfgs":
-        opt = tc.optim.LBFGS(params, lr=lr, max_iter=lbfgs_iters,
-                             line_search_fn="strong_wolfe")
-    else:
+
+    def build_optimizer():
+        if optimizer == "adam":
+            return tc.optim.Adam(params, lr=lr)
+        if optimizer == "lbfgs":
+            return tc.optim.LBFGS(params, lr=lr, max_iter=lbfgs_iters,
+                                  line_search_fn="strong_wolfe")
         raise ValueError(f"optimizer must be 'adam' or 'lbfgs', got {optimizer!r}")
+
+    opt = build_optimizer()
+    optimizer_reset_events: list[int] = []
 
     energy_history: list[float] = []
     grad_history: list[float] = []
@@ -236,7 +248,17 @@ def train_ad_mps(admps: ADVariationalMPS, num_steps: int = 200, lr: float = 1e-2
             e = admps.energy()
             e.backward()
             opt.step()
-            _project(admps.mps, projection)
+            if projection == "canonical" and (step + 1) % canonical_interval == 0:
+                canon = Can.left_canonicalize(admps.mps, method=canonicalization_method)
+                canon = Can.normalize_center(canon, center=admps.mps.N - 1)
+                with tc.no_grad():
+                    for dst, src in zip(admps.mps.tensors, canon.tensors):
+                        dst.copy_(src)
+                if reset_optimizer_on_canonicalize:
+                    opt = build_optimizer()
+                    optimizer_reset_events.append(step + 1)
+            elif projection != "canonical":
+                _project(admps.mps, projection)
             if (step + 1) % record_every == 0:
                 _record()
             if verbose and (step % max(1, num_steps // 10) == 0):
@@ -250,14 +272,36 @@ def train_ad_mps(admps: ADVariationalMPS, num_steps: int = 200, lr: float = 1e-2
             return e
         for step in range(num_steps):
             opt.step(closure)
-            _project(admps.mps, projection)
+            if projection == "canonical" and (step + 1) % canonical_interval == 0:
+                canon = Can.left_canonicalize(admps.mps, method=canonicalization_method)
+                canon = Can.normalize_center(canon, center=admps.mps.N - 1)
+                with tc.no_grad():
+                    for dst, src in zip(admps.mps.tensors, canon.tensors):
+                        dst.copy_(src)
+                if reset_optimizer_on_canonicalize:
+                    opt = build_optimizer()
+                    optimizer_reset_events.append(step + 1)
+            elif projection != "canonical":
+                _project(admps.mps, projection)
             if (step + 1) % record_every == 0:
                 _record()
 
     # ensure final state diagnostics reflect the post-projection state
     if (num_steps % record_every) != 0:
         _record()
+    raw_norm_before_projection = _state_norm(admps.mps)
+    energy_before_projection = float(admps.energy())
+    final_state = Can.left_canonicalize(admps.mps, method=canonicalization_method)
+    final_state = Can.normalize_center(final_state, center=admps.mps.N - 1)
+    with tc.no_grad():
+        for dst, src in zip(admps.mps.tensors, final_state.tensors):
+            dst.copy_(src)
     final_e = float(admps.energy())
+    physical_norm_after_projection = _state_norm(admps.mps)
+    if abs(final_e - energy_before_projection) > 1e-10:
+        raise RuntimeError("final canonical normalization changed the Rayleigh energy")
+    if abs(physical_norm_after_projection - 1.0) > 1e-10:
+        raise RuntimeError("final Global AD physical state is not normalized")
     return {
         "energy_history": energy_history,
         "grad_norm_history": grad_history,
@@ -271,4 +315,10 @@ def train_ad_mps(admps: ADVariationalMPS, num_steps: int = 200, lr: float = 1e-2
         "projection": projection,
         "num_steps": num_steps,
         "lr": lr,
+        "canonical_interval": canonical_interval,
+        "canonicalization_method": canonicalization_method,
+        "raw_norm_before_projection": raw_norm_before_projection,
+        "physical_norm_after_projection": physical_norm_after_projection,
+        "canonical_residual": Can.canonical_residual(admps.mps, center=admps.mps.N - 1),
+        "optimizer_reset_events": optimizer_reset_events,
     }

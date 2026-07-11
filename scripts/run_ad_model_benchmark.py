@@ -476,6 +476,12 @@ def _legacy_result_from_unified(unified: dict) -> dict:
         "sector_mode": method["sector_mode"],
         "init": method.get("initialization", diagnostics.get("initialization", "auto")),
         "projection": method.get("projection"),
+        "canonical_interval": method.get("canonical_interval"),
+        "canonicalization_method": method.get("canonicalization_method"),
+        "raw_norm_before_projection": summary.get("raw_norm_before_projection"),
+        "physical_norm_after_projection": summary.get("physical_norm_after_projection"),
+        "canonical_residual": summary.get("canonical_residual"),
+        "optimizer_reset_events": summary.get("optimizer_reset_events"),
         "stabilization": method.get("post_step_stabilization"),
         "two_site_precondition": method.get("two_site_precondition"),
         "grad_clip": method.get("grad_clip"),
@@ -531,7 +537,23 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lbfgs-tolerance-change", type=float, default=None)
     p.add_argument("--lr", type=float, default=0.01)
     p.add_argument("--precondition", choices=["theta_norm", "none"], default="theta_norm")
-    p.add_argument("--stabilization", choices=["tensor_norm", "none"], default="none")
+    p.add_argument(
+        "--stabilization",
+        choices=["tensor_norm", "none", "canonical", "sector_canonical"],
+        default="none",
+    )
+    p.add_argument("--canonical-interval", type=int, default=1)
+    p.add_argument("--canonicalization-method", choices=["qr", "svd"], default="qr")
+    p.add_argument(
+        "--reset-optimizer-on-canonicalize",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    p.add_argument(
+        "--normalize-final-state",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     p.add_argument("--grad-clip", type=float, default=None)
     p.add_argument("--sector-mode", choices=["none", "soft", "hard"], default="none")
     p.add_argument("--output", type=Path, default=None)

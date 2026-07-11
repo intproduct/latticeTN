@@ -183,6 +183,74 @@ def mixed_canonical(mps: "MPS", center: int) -> "MPS":
     return _wrap(mps, tensors)
 
 
+def _left_svd_canonical(mps: "MPS") -> "MPS":
+    """Exact non-truncating SVD analogue of :func:`left_canonical`."""
+    tensors = _detach_clone(mps)
+    with tc.no_grad():
+        for i in range(len(tensors) - 1):
+            l, d, r = tensors[i].shape
+            U, S, Vh = _svd(tensors[i].reshape(l * d, r))
+            k = U.shape[1]
+            tensors[i] = U.reshape(l, d, k)
+            residual = S[:, None].to(Vh.dtype) * Vh
+            tensors[i + 1] = tc.einsum("kr,rdc->kdc", residual, tensors[i + 1])
+    return _wrap(mps, tensors)
+
+
+def left_canonicalize(mps: "MPS", method: str = "qr") -> "MPS":
+    """Return an exact, non-truncated left-canonical representative."""
+    if method == "qr":
+        return left_canonical(mps)
+    if method == "svd":
+        return _left_svd_canonical(mps)
+    raise ValueError(f"canonicalization method must be 'qr' or 'svd', got {method!r}")
+
+
+def right_canonicalize(mps: "MPS", method: str = "qr") -> "MPS":
+    """Return an exact, non-truncated right-canonical representative."""
+    if method != "qr":
+        # An exact SVD right sweep is obtained by reversing the QR/SVD roles;
+        # Stage 12A only requires SVD as an exact split diagnostic.
+        raise ValueError("right canonicalization currently supports method='qr' only")
+    return right_canonical(mps)
+
+
+def mixed_canonicalize(mps: "MPS", center: int, method: str = "qr") -> "MPS":
+    """Return an exact mixed-canonical representative with a chosen center."""
+    if method != "qr":
+        raise ValueError("mixed canonicalization currently supports method='qr' only")
+    return mixed_canonical(mps, center)
+
+
+def normalize_center(mps: "MPS", center: int | None = None, *, atol: float = 0.0) -> "MPS":
+    """Normalize a mixed-canonical MPS by scaling only its center tensor.
+
+    The input is first brought to mixed-canonical form, so this is an exact
+    gauge change followed by the single global normalization required to pick
+    a unit representative of the same physical ray.
+    """
+    if center is None:
+        center = mps.N - 1
+    out = mixed_canonical(mps, center)
+    with tc.no_grad():
+        norm = out.tensors[center].norm()
+        if not bool(tc.isfinite(norm)) or float(norm) <= atol:
+            raise ValueError(f"cannot normalize MPS center with norm {float(norm)!r}")
+        out.tensors[center].div_(norm)
+    return out
+
+
+def canonical_residual(mps: "MPS", center: int | None = None) -> float:
+    """Maximum mixed-canonical isometry residual around ``center``."""
+    if center is None:
+        center = mps.N - 1
+    if not (0 <= center < mps.N):
+        raise ValueError(f"center {center} out of range for N={mps.N}")
+    left = [left_orthonormal_error(mps.tensors[i]) for i in range(center)]
+    right = [right_orthonormal_error(mps.tensors[i]) for i in range(center + 1, mps.N)]
+    return max(left + right, default=0.0)
+
+
 # ---------------------------------------------------------------------------
 # norm
 # ---------------------------------------------------------------------------
