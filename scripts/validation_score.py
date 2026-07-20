@@ -26,6 +26,10 @@ FAST_TESTS = [
     "tests/test_heisenberg_mpo_dense.py",
     "tests/test_heisenberg_energy_dense_compare.py",
     "tests/test_heisenberg_variational_smoke.py",
+    "tests/test_tdvp_krylov.py",
+    "tests/test_tdvp_effective_hamiltonian.py",
+    "tests/test_tdvp_one_site.py",
+    "tests/test_tdvp_two_site.py",
     "tests/physics/test_stage11_hamiltonian_audit.py",
     "tests/physics/test_stage11_small_n_energy_benchmarks.py",
     "tests/physics/test_stage11_observables_correlations.py",
@@ -34,6 +38,7 @@ FAST_TESTS = [
 
 FULL_EXTRA_COMMANDS = [
     [sys.executable, "scripts/run_heisenberg_small.py", "--N", "6", "--chi", "8", "--steps", "300", "--lr", "1e-2", "--seed", "0", "--device", "cpu"],
+    [sys.executable, "scripts/run_tdvp_heisenberg_quench.py", "--N", "8", "--steps", "10", "--chi-max", "8", "--device", "cpu"],
 ]
 
 

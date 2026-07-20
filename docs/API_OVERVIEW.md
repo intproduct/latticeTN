@@ -8,7 +8,9 @@ MPO site tensor shape `(left, right, phys_in, phys_out)`, default dtype
 > **Mainline vs. baseline.** `ad_variational` and `ad_local` are the **AD
 > mainline** (differentiable Rayleigh quotient + torch optimizer). `dmrg` and
 > `lanczos` are **classical reference baselines** — never imported by the AD
-> modules, never in the loss path. `canonical` provides SVD/QR tools used only
+> modules, never in the loss path. Traditional `tdvp` is a classical real-time
+> baseline, separate from the future AD-TDVP research path. `canonical`
+> provides SVD/QR tools used only
 > as optional stabilization/projection/compression, never as the optimizer.
 
 ---
@@ -227,6 +229,27 @@ eigensolver**.
 - `train_ad_two_site(mps, mpo, num_sweeps, local_steps, lr, optimizer="lbfgs",
   max_bond_dim, cutoff, stabilization)` → history dict + per-sweep/per-bond
   records (`energy_history`, `bond_dim_history`, `truncation_error_history`).
+
+## `latticetn.tdvp` — traditional real-time TDVP (Stage 12B)  ⚠️ CLASSICAL BASELINE
+
+Matrix-free projector-splitting time evolution on the finite open-boundary MPS
+manifold. This is deliberately not AD-TDVP.
+
+- `TDVP(mps, mpo, dt, method="one_site"|"two_site", device=...,
+  krylov_dim=..., max_bond_dim=..., truncation_tol=...)` — configure the
+  time-independent Hamiltonian evolution.
+- `TDVP.evolve(steps, observables={name: callback})` → `TDVPResult` with the
+  evolved MPS, time/energy/norm histories, callback histories, and two-site
+  truncation/bond diagnostics.
+- `tdvp.effective_hamiltonian` — native one-site, zero-site, and two-site MPO
+  environment actions; no dense many-body Hamiltonian.
+- `tdvp.krylov.lanczos_expm_action` — Hermitian matrix-free action of
+  `exp(-i dt H_eff)` with full reorthogonalization and CPU/CUDA device parity.
+- One-site keeps bond dimensions fixed. Two-site uses adaptive SVD ranks up to
+  `max_bond_dim` and records relative discarded weights.
+
+See [`STAGE12B_TDVP_REPORT.md`](STAGE12B_TDVP_REPORT.md) and
+`scripts/run_tdvp_heisenberg_quench.py`.
 
 ## `latticetn.dmrg` — classical two-site DMRG (Stage 4A/4B)  ⚠️ REFERENCE BASELINE
 

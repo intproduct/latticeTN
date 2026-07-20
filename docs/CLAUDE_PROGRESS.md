@@ -1964,3 +1964,88 @@ Next action:
 Continue only with bounded CPU-small evidence, or request explicit resource
 bounds for production-depth convergence/literature trend jobs before claiming
 Stage 11 completion.
+## Checkpoint Stage 12B-01: One-site TDVP Baseline
+
+Goal:
+Implement the traditional fixed-bond one-site TDVP baseline with matrix-free
+MPO environments, a Hermitian Lanczos exponential action, symmetric
+projector-splitting sweeps, and small-system ED validation.
+
+Files changed:
+- Added `latticetn/tdvp/effective_hamiltonian.py` with one-site, zero-site, and
+  two-site matrix-free effective-Hamiltonian contractions.
+- Added `latticetn/tdvp/krylov.py` with a device-preserving, fully
+  reorthogonalized Lanczos exponential action.
+- Added `latticetn/tdvp/tdvp.py` and package exports with the `TDVP` /
+  `TDVPResult` API and the symmetric one-site projector-splitting integrator.
+- Added focused Krylov, effective-Hamiltonian, norm/energy, canonical-gauge,
+  fixed-bond, N=8 ED-fidelity, and local-observable tests.
+
+Commands run:
+- `python -m pytest -q -p no:cacheprovider tests/test_mps_canonicalization.py tests/test_dmrg_environments.py tests/test_dmrg_matrix_free_heff.py tests/test_dmrg_two_site_update.py`
+- `python scripts/validation_score.py --fast`
+- `python -m pytest -q -p no:cacheprovider tests/test_tdvp_krylov.py tests/test_tdvp_effective_hamiltonian.py tests/test_tdvp_one_site.py`
+
+Result:
+- Existing canonical/DMRG baseline: 15 passed.
+- Pre-change fast validation: 52 passed, Score PASS.
+- New Stage 12B-1 focused validation: 7 passed.
+- A full-bond N=8 Neel state evolved to t=0.05 matches dense exact evolution
+  with fidelity above `1 - 1e-11`; norm drift is below `1e-12` and local Sz
+  agrees with the dense reference below `1e-11`.
+
+Current failing test or bottleneck:
+- No Stage 12B-1 focused failure.  The new TDVP tests still need a full fast
+  regression checkpoint, and Stage 12B-2 two-site evolution is not yet wired
+  into the driver.
+
+Next action:
+Run fast validation, then implement two-site projector splitting with SVD
+truncation and adaptive bond growth.
+## Checkpoint Stage 12B-02: Two-site TDVP and Final Validation
+
+Goal:
+Complete Stage 12B with two-site projector splitting, adaptive bond growth and
+truncation, a Heisenberg Neel-quench benchmark, documentation, and full
+repository regression evidence.
+
+Files changed:
+- Extended `latticetn/tdvp/tdvp.py` with symmetric two-site sweeps, overlapping
+  one-site backward evolution, adaptive SVD rank selection, per-update
+  discarded-weight diagnostics, and normalized post-truncation states.
+- Added `tests/test_tdvp_two_site.py` and opt-in `tests/test_tdvp_gpu.py`.
+- Added `scripts/run_tdvp_heisenberg_quench.py` and included all CPU TDVP tests
+  plus the quench in the formal validation score.
+- Added `docs/STAGE12B_TDVP_REPORT.md` and updated API, index, numerical report,
+  user guide, README, roadmap, and repository status.
+- Added `scripts/__init__.py` so the repository's local scripts package wins
+  over an unrelated installed top-level `scripts` package during full pytest
+  collection.
+
+Commands run:
+- `python -m pytest -q -p no:cacheprovider tests/test_tdvp_krylov.py tests/test_tdvp_effective_hamiltonian.py tests/test_tdvp_one_site.py tests/test_tdvp_two_site.py`
+- `python scripts/run_tdvp_heisenberg_quench.py --N 8 --dt 0.02 --steps 10 --chi-max 8 --truncation-tol 1e-10 --device cpu`
+- `python -m pytest -q -p no:cacheprovider`
+- `python scripts/validation_score.py --full`
+- `git diff --check`
+
+Result:
+- Focused TDVP tests: 10 passed.
+- Full repository pytest: PASS at 100%; opt-in GPU tests clean-skipped and no
+  failures occurred.
+- Formal full validation: 62 fast tests passed; the N=6 AD reference solve
+  passed; the N=8 two-site TDVP quench passed.
+- N=8 quench at t=0.2, chi_max=8: norm drift `8.882e-16`, energy drift
+  `5.356e-10`, ED fidelity `0.999999993776`, midpoint Sz `0.5 ->
+  0.480264616391`, midpoint entropy `0 -> 0.055401154702` nats.
+- Full-chi N=8 one-site and two-site tests both achieve fidelity above
+  `1 - 1e-11`; adaptive two-site bonds grow from chi=1 and obey the requested
+  cap and discarded-weight tolerance.
+
+Current failing test or bottleneck:
+- None found. GPU execution is intentionally not performed by default; the
+  device path is covered by an opt-in parity test under the repository GPU
+  selector.
+
+Next action:
+Perform the final requirement/diff audit, then commit and push Stage 12B.

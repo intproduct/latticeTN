@@ -1,13 +1,14 @@
 # Repository Status
 
-Last updated: 2026-07-07 (stabilization and semantic-integrity sprint)
+Last updated: 2026-07-21 (Stage 12B traditional TDVP)
 
 ## What this repository is
 
 `latticeTN` is an **automatic-differentiation tensor-network** library. The
 mainline solver trains an MPS on an MPO Hamiltonian by minimizing a
 differentiable Rayleigh quotient with PyTorch autograd + a torch optimizer.
-Classical DMRG / Lanczos are reference baselines, not the mainline.
+Classical DMRG / Lanczos and traditional TDVP are reference baselines, not the
+AD mainline.
 
 ## Repository layout
 
@@ -27,6 +28,7 @@ latticetn/            # the importable package (AD mainline + baselines)
   ad_local.py         # Stage 5A AD local-tensor optim.   [AD MAINLINE]
   ad_two_site.py      # Stage 5B two-site AD local optim. [AD MAINLINE]
   dmrg.py             # Stage 4A/4B classical DMRG        [REFERENCE BASELINE]
+  tdvp/               # Stage 12B traditional TDVP        [CLASSICAL BASELINE]
   lanczos.py          # Stage 4B Krylov local eigensolver [REFERENCE BASELINE]
 scripts/              # *_score.py runners + run_*.py smoke/generators
 tests/                # formal pytest suite (default collection target)
@@ -70,6 +72,7 @@ and `tests/test_ad_two_site_policy.py`.
 | Module | Role | Guard |
 |---|---|---|
 | `latticetn.dmrg` | classical two-site DMRG (Stage 4A/4B) | own score scripts; not imported by `ad_variational`/`ad_local`. |
+| `latticetn.tdvp` | traditional one-/two-site real-time TDVP (Stage 12B) | matrix-free projector splitting; separate from future AD-TDVP. |
 | `latticetn.lanczos` | Krylov local eigensolver (Stage 4B) | same; not imported by the AD modules. |
 | `latticetn.canonical` | SVD/QR canonicalization + compression | post-step stabilization / diagnostics only; never in the loss path. |
 | `latticetn.observables` | dense-reference observables | small-system validation/diagnostics. |
@@ -92,10 +95,9 @@ All run CPU-only, `torch.complex128`.
 | `python scripts/model_builder_score.py --fast` | PASS (Stage 7B; CPU-only by default; GPU opt-in via `LATTICETN_RUN_GPU=1` + unified selector) |
 | `python scripts/hubbard_score.py --fast` | PASS (Stage 7C; CPU-only by default; GPU opt-in via `LATTICETN_RUN_GPU=1` + unified selector) |
 
-Default `pytest -q` collects **340 tests, all under `tests/`** (Stage 7B was
-244; Stage 7C adds eight Hubbard test files with 47 new tests, plus the
-existing collection growth); nothing under `legacy/` or `examples/` is
-collected.
+Default `pytest -q` collects only formal tests under `tests/`; nothing under
+`legacy/` or `examples/` is collected. Stage 12B adds ten CPU TDVP tests plus
+one opt-in GPU parity test.
 
 ## Legacy / archived code
 
@@ -109,10 +111,7 @@ caution. See `legacy/README.md`.
 
 ## Not yet done
 
-- No remote git repository; the repo is prepared for a local `git init` and a
-  later (manual) remote push. See the suggested commands in the Repo-Prep
-  handoff.
-- Future stages (XXZ/TFI, TEBD/TDVP) are described in `ROADMAP.md` but not
+- Future stages (XXZ/TFI, TEBD, AD-TDVP) are described in `ROADMAP.md` but not
   started. Stage 5C (GPU AD benchmark, shipped as **Stage 6A**) and Stage 5B
   (two-site AD local optimization with optional bond growth) are **done**.
   Stage 6B (bilingual docs + tutorials + MkDocs skeleton) is **done**. Stage

@@ -120,13 +120,14 @@ Add XXZ and transverse-field Ising (TFI) Hamiltonians as
 AD and DMRG-baseline comparisons. Validate the AD mainline generalizes beyond
 the isotropic Heisenberg point.
 
-### Stage 7 — Real-time evolution (optional, future)
+### Stage 12B/12C — Real-time evolution
 
-Time-evolving methods (TEBD and/or TDVP) as an **optional** direction. If
-pursued, the differentiable time-evolution should remain on the AD mainline
-where feasible (e.g. differentiable Trotter steps trained/projected by autograd),
-with classical TEBD/TDVP as reference baselines. Out of scope until a dedicated
-goal.
+Stage 12B traditional one-/two-site TDVP is implemented as a classical
+projector-splitting baseline with matrix-free MPO environments, Lanczos
+exponential actions, and adaptive two-site bonds. Stage 12C remains the future
+research direction for differentiable AD-TDVP; it must remain clearly
+separated from the classical baseline and preserve autograd through its
+tangent evolution.
 
 ## Non-goals
 

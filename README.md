@@ -38,13 +38,14 @@ MPS parameters (trainable nn.Parameter)
 | Stage 3A | Canonicalization + SVD compression | done |
 | Stage 3B | Native (scalable) MPS/MPO contractions | done |
 | Stage 4A/4B | Classical two-site DMRG + Lanczos **baseline** | done |
+| Stage 12B | Traditional one-/two-site TDVP + adaptive chi **baseline** | done |
 | Stage 4R | Global AD-MPS (all tensors trained at once) | done |
 | Stage 5A | AD local-tensor optimization (center-tensor sweep) | done |
 | Stage 5B | Two-site AD local optimization (optional bond growth) | done |
 | Stage 6A | CPU/GPU AD solver benchmark (opt-in GPU) | done |
 | Stage 6B | Bilingual docs, tutorials, MkDocs skeleton | done |
 
-See `ROADMAP.md` for future directions (XXZ/TFI extensions, TEBD/TDVP). The
+See `ROADMAP.md` for future directions (XXZ/TFI extensions and AD-TDVP). The
 Stage 5C GPU AD benchmark slot from earlier drafts is **implemented as Stage
 6A** — see `docs/AD_GPU_BENCHMARK_SPEC.md`.
 

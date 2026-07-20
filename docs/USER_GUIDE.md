@@ -477,7 +477,27 @@ print("DMRG E =", r["final_energy"], " below ground?", r["below_ground"])
 `latticetn.lanczos.lanczos_lowest_eigenpair` is the Krylov local eigensolver used
 by DMRG's `solver="lanczos"`. It is a reference tool, **not** the AD solver.
 
-> **Remember:** exact / DMRG / Lanczos exist to *check* that the AD solver
+### 8.4 Traditional TDVP time evolution
+
+```python
+from latticetn.tdvp import TDVP
+
+solver = TDVP(
+    mps, mpo, dt=0.01, method="two_site",
+    max_bond_dim=16, truncation_tol=1e-10, device="cpu",
+)
+result = solver.evolve(steps=100)
+print(result.energy_history[-1], result.norm_history[-1])
+```
+
+Use `method="one_site"` for a fixed-bond projector-splitting evolution, or
+`method="two_site"` for adaptive SVD bond growth/truncation. This is the
+classical Stage 12B baseline and does not enter any AD loss path. See
+[`STAGE12B_TDVP_REPORT.md`](STAGE12B_TDVP_REPORT.md) for observables,
+validation, and limitations.
+
+> **Remember:** exact / DMRG / Lanczos and traditional TDVP are classical
+> baselines used to check or complement the AD solver
 > reaches the right variational minimum. They are not the project's mainline.
 > Never import them in an AD loss path.
 

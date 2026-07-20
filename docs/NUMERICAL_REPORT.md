@@ -73,7 +73,7 @@ pytest -q tests/test_reference_models.py tests/test_mps_dense.py tests/test_mpo_
        tests/test_tfi_mpo_dense.py tests/test_energy_rayleigh.py \
        tests/test_heisenberg_mpo_dense.py tests/test_heisenberg_energy_dense_compare.py \
        tests/test_heisenberg_variational_smoke.py
-# 36 passed
+# 62 passed
 ```
 
 `--full` additionally runs the small Heisenberg solve:
@@ -87,13 +87,16 @@ python scripts/validation_score.py --full    # exit 0
 
 - **System size**: validated only for N <= 8 (ED) and N <= 6 (variational) on
   CPU. Larger N requires denser ED memory (2^N) and longer/2-site optimization.
-- **Optimizer**: single-site full-tensor Adam with Frobenius re-normalization.
-  Convergence slows for larger N / smaller chi; no subspace expansion or 2-site
-  DMRG sweep is implemented yet.
+- **Ground-state optimizer**: the original validation table uses single-site
+  full-tensor Adam with Frobenius re-normalization. Classical DMRG, two-site AD,
+  and traditional TDVP now exist as separate modules but do not alter that
+  original AD validation path.
 - **Boundary**: only open boundary conditions. Periodic boundary MPS/MPO is not
   in the validation path (prototype code in `AD_MPS*.py` is preserved but not
   validated).
-- **dtype/device**: complex128, CPU only. No CUDA in tests.
+- **dtype/device**: scientific validation defaults to complex128/CPU. TDVP uses
+  device-preserving tensor contractions and has an opt-in CUDA parity test;
+  default tests never launch GPU work.
 - **Models**: Heisenberg (XXX) and TFI MPOs are validated against dense
   references. XXZ / longer-range / higher-spin models are out of scope for this
   stage.
@@ -131,3 +134,20 @@ raw-versus-physical norm metadata.
 | Spinless/Hubbard blockwise QR | PASS (3 passed) | `python -m pytest -q tests/test_stage12a_sector_canonical.py` |
 | Global AD cadence/reset/output metadata and hard-sector dense-QR rejection | PASS (4 passed) | `python -m pytest -q tests/test_stage12a_runner.py` |
 | Repository fast validation | PASS | `python scripts/validation_score.py --fast` |
+
+# Stage 12B traditional TDVP validation
+
+Stage 12B adds a classical projector-splitting TDVP baseline, separate from the
+future AD-TDVP Stage 12C. One-site evolution keeps fixed bond dimensions;
+two-site evolution grows/truncates bonds through an adaptive SVD. Both use
+native MPO environments and a matrix-free Hermitian Lanczos exponential action.
+
+| Stage 12B check | Result | Command |
+|---|---|---|
+| Krylov and effective-Hamiltonian actions | PASS | `python -m pytest -q tests/test_tdvp_krylov.py tests/test_tdvp_effective_hamiltonian.py` |
+| One-site norm, energy, gauge, fixed chi, N=8 ED fidelity/local Sz | PASS | `python -m pytest -q tests/test_tdvp_one_site.py` |
+| Two-site adaptive chi, norm/energy, N=8 ED fidelity, quench observables | PASS | `python -m pytest -q tests/test_tdvp_two_site.py` |
+| N=8 Heisenberg Neel quench | PASS: norm drift `8.9e-16`, energy drift `5.4e-10`, fidelity `0.999999993776` at t=0.2 for chi_max=8 | `python scripts/run_tdvp_heisenberg_quench.py --N 8 --dt 0.02 --steps 10 --chi-max 8 --truncation-tol 1e-10 --device cpu` |
+
+See `docs/STAGE12B_TDVP_REPORT.md` for the algorithm, complete validation table,
+API example, and limitations.
