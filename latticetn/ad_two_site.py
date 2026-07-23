@@ -62,6 +62,7 @@ import torch as tc
 from .mps import MPS
 from .mpo import MPO
 from . import contractions as K
+from .numerics import positive, real_if_hermitian, truncation_error
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +157,6 @@ def _split_theta(theta: tc.Tensor, max_bond_dim: int | None,
     M = tc.as_tensor(theta).detach().reshape(l * si, si1 * r)
     U, S, Vh = tc.linalg.svd(M, full_matrices=False)
     s2 = S.real ** 2
-    total = float(s2.sum())
     k0 = S.shape[0]
 
     # cutoff mask (drop tiny singular values)
@@ -168,14 +168,7 @@ def _split_theta(theta: tc.Tensor, max_bond_dim: int | None,
         k = min(k, int(max_bond_dim))
     k = max(1, k)
 
-    # truncation error = discarded weight relative to total
-    if total > 0:
-        trunc = float((total - float(s2[:k].sum())) / total)
-    else:
-        trunc = 0.0
-    trunc = max(0.0, trunc)
-    if not (trunc == trunc):  # NaN guard
-        trunc = 0.0
+    trunc = truncation_error(s2, k, name="two-site AD split")
 
     with tc.no_grad():
         U = U[:, :k]
@@ -321,8 +314,14 @@ class ADTwoSiteOptimizer:
         Htheta = tc.einsum("pqr,qsab,stcd,utw,racw->pbdu",
                            self._L, self._Wi, self._Wi1, self._R, theta)
         num = (theta.conj() * Htheta).sum()
-        den = (theta.conj() * theta).sum()
-        return (num / den).real
+        den = positive(
+            (theta.conj() * theta).sum(),
+            name="two-site AD Rayleigh denominator",
+        )
+        return real_if_hermitian(
+            num / den,
+            name="two-site AD Rayleigh energy",
+        )
 
     def loss(self) -> tc.Tensor:
         """Alias of :meth:`energy`; the variational minimization target."""
@@ -461,6 +460,9 @@ def train_ad_two_site(mps: MPS, mpo: MPO, num_sweeps: int = 2,
         return trunc, kept
 
     e0 = _global_e()
+    best_energy = e0
+    best_step = 0
+    best_tensors = [tensor.detach().clone() for tensor in adtso.mps.tensors]
     energy_history.append(e0)
     grad_history.append(0.0)
     bond_history.append(adtso.max_bond_dim())
@@ -482,6 +484,12 @@ def train_ad_two_site(mps: MPS, mpo: MPO, num_sweeps: int = 2,
                       f"E={_global_e():.10f} trunc={trunc:.2e} kept={kept}",
                       file=sys.stderr)
         e_after = _global_e()
+        if e_after < best_energy:
+            best_energy = e_after
+            best_step = s + 1
+            best_tensors = [
+                tensor.detach().clone() for tensor in adtso.mps.tensors
+            ]
         energy_history.append(e_after)
         grad_history.append(float(_grad_norm(adtso.parameters())))
         bond_history.append(adtso.max_bond_dim())
@@ -495,7 +503,21 @@ def train_ad_two_site(mps: MPS, mpo: MPO, num_sweeps: int = 2,
             "max_bond": adtso.max_bond_dim(),
         })
 
+    # Restore the state that generated the reported minimum so downstream
+    # observables and bond diagnostics refer to that same physical state.
+    with tc.no_grad():
+        for i, best in enumerate(best_tensors):
+            adtso.mps.tensors[i] = tc.nn.Parameter(
+                best.to(dtype=adtso.dtype, device=adtso.device).contiguous(),
+                requires_grad=False,
+            )
     final_e = _global_e()
+    tolerance = 1e-10 if adtso.dtype == tc.complex128 else 2e-5
+    if abs(final_e - best_energy) > tolerance:
+        raise RuntimeError(
+            "restored two-site best MPS does not reproduce best energy: "
+            f"|{final_e} - {best_energy}| > {tolerance}"
+        )
     return {
         "energy_history": energy_history,
         "grad_norm_history": grad_history,
@@ -505,6 +527,9 @@ def train_ad_two_site(mps: MPS, mpo: MPO, num_sweeps: int = 2,
         "per_bond_truncation": per_bond_trunc,
         "initial_energy": e0,
         "final_energy": float(final_e),
+        "best_energy": float(final_e),
+        "best_step": best_step,
+        "final_state_source": "best_mps",
         "max_bond": adtso.max_bond_dim(),
         "final_bond_dims": adtso.bond_dims(),
         "num_sweeps": num_sweeps,

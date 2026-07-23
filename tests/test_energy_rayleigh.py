@@ -26,7 +26,7 @@ def test_energy_is_rayleigh_quotient_matches_dense():
         mpo = MPO.from_bonds(N, 2, dtype=DTYPE).generate_heisenberg(J=1.0)
         H = heisenberg_dense(N)
         mps = MPS(N, 2, 8, dtype=DTYPE)
-        e_mpo = float(mps.energy_with_MPO(mpo))
+        e_mpo = float(mps.energy_with_MPO(mpo).detach())
         e_dense = float(_dense_energy(mps.to_dense(), H))
         assert abs(e_mpo - e_dense) < 1e-9, (N, e_mpo, e_dense)
 

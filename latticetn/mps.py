@@ -12,6 +12,8 @@ from __future__ import annotations
 import torch as tc
 import torch.nn as nn
 
+from .numerics import positive, real_if_hermitian
+
 
 class MPS:
     """Finite open-boundary MPS (random init, autograd-friendly).
@@ -32,16 +34,22 @@ class MPS:
         self.dtype = dtype
         self.device = device
         self.boundary = boundary
-        g = tc.Generator(device=device) if rng is None else None
+        if N <= 0 or dim <= 0 or chi <= 0:
+            raise ValueError(f"N, dim, and chi must be positive, got {N}, {dim}, {chi}")
+        if rng is not None and not isinstance(rng, tc.Generator):
+            raise TypeError("rng must be a torch.Generator or None")
         # bond_i = left bond of site i (i=0..N), bond_0=bond_N=1.
         # Cap by both chi and the Hilbert-space geometry so bonds match across
         # sites and never exceed what an open chain actually needs.
-        bonds = [min(chi, 2 ** min(i, N - i)) for i in range(N + 1)]
+        bonds = [min(chi, dim ** min(i, N - i)) for i in range(N + 1)]
         tensors = []
         for i in range(N):
             l = bonds[i]
             r = bonds[i + 1]
-            t = tc.randn((l, dim, r), dtype=dtype, device=device, generator=g)
+            # ``generator=None`` deliberately uses PyTorch's global RNG, so
+            # manual_seed controls reproducibility while successive MPS
+            # constructions do not silently repeat the same tensors.
+            t = tc.randn((l, dim, r), dtype=dtype, device=device, generator=rng)
             tensors.append(nn.Parameter(t))
         self.tensors = nn.ParameterList(tensors)
 
@@ -125,7 +133,7 @@ class MPS:
 
     def norm_sq(self) -> tc.Tensor:
         """<self|self> as a real-valued scalar."""
-        return self.overlap(self).real
+        return positive(self.overlap(self), name="MPS norm squared")
 
     # ---- energy -----------------------------------------------------------
     def energy_with_MPO(self, mpo) -> tc.Tensor:
@@ -137,10 +145,9 @@ class MPS:
         assert self.dim == mpo.dim
         # numerator <psi|H|psi>
         num = self._expect_MPO(mpo)
-        den = self.overlap(self)
-        # keep complex division, then take real part (H is Hermitian)
+        den = positive(self.overlap(self), name="MPS Rayleigh denominator")
         e = num / den
-        return e.real
+        return real_if_hermitian(e, name="MPS Rayleigh energy")
 
     def _expect_MPO(self, mpo) -> tc.Tensor:
         """<self| H |self> via a (bra_bond, mpo_bond, ket_bond) left env."""

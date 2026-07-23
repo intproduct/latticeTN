@@ -213,10 +213,7 @@ def _grad_norm(params) -> tc.Tensor:
 
 def _canonical_error(mps: MPS) -> float:
     """Max left-orthonormality error over sites [0, N-2] (Stage 3A diagnostic)."""
-    try:
-        return float(Can.left_orthonormal_all(mps))
-    except Exception:
-        return float("nan")
+    return float(Can.left_orthonormal_all(mps))
 
 
 def _state_norm(mps: MPS) -> float:

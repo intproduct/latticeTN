@@ -26,6 +26,7 @@ from __future__ import annotations
 import torch as tc
 
 from .operators import spin_operators  # noqa: F401  (re-exported convenience)
+from .numerics import positive, real_if_hermitian
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +74,7 @@ def native_norm_sq(mps) -> tc.Tensor:
 
 def native_norm(mps) -> tc.Tensor:
     """sqrt(<psi|psi>) (nonnegative real). Differentiable."""
-    return native_norm_sq(mps).real.clamp_min(0).sqrt()
+    return positive(native_norm_sq(mps), name="native MPS norm squared").sqrt()
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +82,7 @@ def native_norm(mps) -> tc.Tensor:
 # ---------------------------------------------------------------------------
 
 def native_local_expect(mps, op: tc.Tensor, site: int) -> tc.Tensor:
-    """<psi| op_site |psi> via native contraction. Differentiable.
+    """<psi|op_site|psi>/<psi|psi> via native contraction. Differentiable.
 
     op: (d, d) acting on the physical index at `site`. Builds the left env up
     to `site`, inserts op, then sweeps the right env to the end.
@@ -93,7 +94,9 @@ def native_local_expect(mps, op: tc.Tensor, site: int) -> tc.Tensor:
     # insert op between bra and ket physical legs:
     # left:(lb,lk); A*:(lb,s,rb); op:(s,s'); A:(lk,s',rk)
     mid = tc.einsum("lk,lsb,st,ktm->bm", left, A.conj(), op, A)
-    return _finish_right(tensors, site, mid)
+    numerator = _finish_right(tensors, site, mid)
+    denominator = positive(native_norm_sq(mps), name="local expectation norm")
+    return numerator / denominator
 
 
 def _finish_right(tensors, site: int, mid: tc.Tensor) -> tc.Tensor:
@@ -110,7 +113,7 @@ def _finish_right(tensors, site: int, mid: tc.Tensor) -> tc.Tensor:
 
 def native_two_site_expect(mps, op1: tc.Tensor, i: int,
                            op2: tc.Tensor, j: int) -> tc.Tensor:
-    """<psi| op1_i op2_j |psi> via native contraction. Differentiable.
+    """Normalized <op1_i op2_j> via native contraction. Differentiable.
 
     Sites i, j distinct. Sweeps left env to i, inserts op1, sweeps to j,
     inserts op2, sweeps to the end.
@@ -142,7 +145,9 @@ def native_two_site_expect(mps, op1: tc.Tensor, i: int,
     A = tensors[hi]
     v = tc.einsum("ab,asc,st,btd->cd", v, A.conj(), op_hi, A)
     # finish right
-    return _finish_right(tensors, hi, v)
+    numerator = _finish_right(tensors, hi, v)
+    denominator = positive(native_norm_sq(mps), name="two-site expectation norm")
+    return numerator / denominator
 
 
 def native_bond_energy_heisenberg(mps, i: int) -> tc.Tensor:
@@ -156,7 +161,7 @@ def native_bond_energy_heisenberg(mps, i: int) -> tc.Tensor:
         + 0.5 * native_two_site_expect(mps, ops["S+"], i, ops["S-"], i + 1)
         + 0.5 * native_two_site_expect(mps, ops["S-"], i, ops["S+"], i + 1)
     )
-    return val.real
+    return real_if_hermitian(val, name="Heisenberg bond expectation")
 
 
 def native_correlation(mps, op: tc.Tensor, i: int, j: int) -> tc.Tensor:
@@ -192,9 +197,9 @@ def native_mpo_expectation(mps, mpo) -> tc.Tensor:
     should use native_mpo_numerator. This helper divides by the native norm-sq.
     """
     num = native_mpo_numerator(mps, mpo)
-    den = native_norm_sq(mps)
+    den = positive(native_norm_sq(mps), name="native Rayleigh denominator")
     e = num / den
-    return e.real
+    return real_if_hermitian(e, name="native Rayleigh energy")
 
 
 def rayleigh_energy_native(mps, mpo) -> tc.Tensor:

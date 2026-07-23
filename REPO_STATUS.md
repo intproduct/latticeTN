@@ -1,6 +1,6 @@
 # Repository Status
 
-Last updated: 2026-07-21 (Stage 12B traditional TDVP)
+Last updated: 2026-07-23 (Stage 12A-P0 physics compliance repair)
 
 ## What this repository is
 
@@ -61,6 +61,14 @@ Stage 10 runner method identities are now explicit: `ad_global`,
 compatibility alias to `ad_global` and should not be used in new configs.
 Stage 11 expansion is paused during the stabilization sprint; large-N
 few-step records are smoke/integration evidence, not convergence evidence.
+
+The Stage 12A-P0 audit found and repaired eight scientific blockers involving
+hard-sector degeneracy/connectivity, sector penalties, Global AD initialization,
+local-dimension geometry/RNG, observable normalization, best-state identity,
+and invalid-number handling. New code is gated by
+`tests/test_p0_scientific_compliance.py`; historical hard-sector/Global AD data
+must follow the rerun and labeling policy in
+`docs/STAGE12A_P0_PHYSICS_COMPLIANCE.md`.
 
 Loss-path cleanliness (no `detach`/`.data`/`no_grad`/unnecessary `.item`, no
 `eigh`/`svd`/`qr`, no `dmrg`/`lanczos`) is AST-enforced by

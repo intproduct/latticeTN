@@ -33,6 +33,7 @@ from .mps import MPS
 from .mpo import MPO
 from . import contractions as K
 from . import lanczos as LZ  # Stage 4B: optional iterative local solver
+from .numerics import truncation_error
 
 
 # ---------------------------------------------------------------------------
@@ -211,8 +212,7 @@ def two_site_update(Theta4: tc.Tensor, chi: int,
     k0 = S.shape[0]
     k = min(chi, k0)
     s2 = S.real ** 2
-    total = float(s2.sum())
-    trunc = float((total - float(s2[:k].sum())) / total) if total > 0 else 0.0
+    trunc = truncation_error(s2, k, name="DMRG two-site split")
 
     U = U[:, :k]
     S = S[:k]
@@ -262,11 +262,13 @@ def two_site_sweep(tensors: list[tc.Tensor], mpo: "MPO", chi: int,
     resulting MPS for the global energy).
     """
     N = len(tensors)
+    if N < 2:
+        raise ValueError("two-site DMRG requires N >= 2")
     Ws = mpo.tensors
     tensors = [x.detach().clone() for x in tensors]
     bonds = list(range(N - 1)) if direction == "right" else list(range(N - 2, -1, -1))
     trunc_errors: list[float] = []
-    last_E = float("nan")
+    last_E: float | None = None
     lanczos_kwargs = dict(lanczos_kwargs or {})
     with tc.no_grad():
         for bi, i in enumerate(bonds):
@@ -309,6 +311,8 @@ def two_site_sweep(tensors: list[tc.Tensor], mpo: "MPO", chi: int,
             t[i] = new_t[0]
             t[i + 1] = new_t[1]
             tensors = t
+    if last_E is None:
+        raise RuntimeError("two-site sweep completed without visiting a bond")
     return tensors, last_E, trunc_errors
 
 
@@ -325,6 +329,8 @@ def run_dmrg(mps: "MPS", mpo: "MPO", chi: int, num_sweeps: int = 4,
     solver selects the local two-site eigensolver ('dense' = Stage 4A
     reference; 'lanczos' = Stage 4B matrix-free iterative solver).
     """
+    if num_sweeps < 1:
+        raise ValueError("num_sweeps must be >= 1")
     N = mps.N
     tensors = [x.detach().clone() for x in mps.tensors]
     history: list[dict] = []
@@ -351,13 +357,13 @@ def run_dmrg(mps: "MPS", mpo: "MPO", chi: int, num_sweeps: int = 4,
 
     # exact ground energy for context
     from .operators import heisenberg_dense, exact_ground_energy
-    try:
+    if N <= 12:
         H = heisenberg_dense(N, dtype=mps.dtype, device=mps.device)
         E_exact, _ = exact_ground_energy(H)
-    except Exception:                       # pragma: no cover - large N fallback
+    else:
         E_exact = None
 
-    final_E = history[-1]["energy"] if history else float("nan")
+    final_E = history[-1]["energy"]
     below_ground = bool(E_exact is not None and final_E < E_exact - 1e-6)
     return {
         "N": N,

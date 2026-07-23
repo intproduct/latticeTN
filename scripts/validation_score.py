@@ -26,6 +26,7 @@ FAST_TESTS = [
     "tests/test_heisenberg_mpo_dense.py",
     "tests/test_heisenberg_energy_dense_compare.py",
     "tests/test_heisenberg_variational_smoke.py",
+    "tests/test_p0_scientific_compliance.py",
     "tests/test_tdvp_krylov.py",
     "tests/test_tdvp_effective_hamiltonian.py",
     "tests/test_tdvp_one_site.py",

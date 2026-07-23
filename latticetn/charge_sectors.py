@@ -8,6 +8,7 @@ backward, and after optimizer steps.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import comb
 from typing import Sequence
 
 import torch as tc
@@ -24,10 +25,35 @@ HubbardCharge = tuple[int, int]
 
 @dataclass
 class BondChargeSectors:
-    """Allowed virtual charges on one MPS bond."""
+    """Allowed virtual charges and degeneracies on one MPS bond.
+
+    ``charges[k]`` labels a symmetry sector and ``dims[k]`` is the number of
+    independent Schmidt/degeneracy channels in that sector. The dense tensor
+    index uses :attr:`expanded_charges`.
+    """
 
     charges: list[SpinlessCharge] | list[HubbardCharge]
     dims: list[int] | None = None
+
+    def __post_init__(self) -> None:
+        if self.dims is None:
+            self.dims = [1] * len(self.charges)
+        if len(self.dims) != len(self.charges):
+            raise ValueError("BondChargeSectors.dims must align with charges")
+        if any(int(dim) <= 0 for dim in self.dims):
+            raise ValueError("all charge-sector degeneracies must be positive")
+
+    @property
+    def expanded_charges(self) -> list:
+        return [
+            charge
+            for charge, dim in zip(self.charges, self.dims)
+            for _ in range(int(dim))
+        ]
+
+    @property
+    def bond_dim(self) -> int:
+        return sum(int(dim) for dim in self.dims)
 
 
 @dataclass
@@ -53,13 +79,91 @@ def _check_N_target(N: int, target: int, name: str) -> None:
         raise ValueError(f"{name} must satisfy 0 <= {name} <= N, got {target}")
 
 
-def _trim_charges(charges: list, chi: int | None, center) -> list:
-    if chi is None or len(charges) <= chi:
-        return charges
-    if chi <= 0:
+def _allocate_channels(
+    charges: list,
+    capacities: dict,
+    chi: int | None,
+    center,
+    required,
+) -> BondChargeSectors:
+    """Allocate a nested chi-prefix of ``(charge, degeneracy)`` channels."""
+
+    if chi is not None and chi <= 0:
         raise ValueError(f"chi must be positive when provided, got {chi}")
-    ranked = sorted(charges, key=lambda q: (center(q), q))
-    return sorted(ranked[:chi])
+    if required not in capacities:
+        raise ValueError(f"required charge {required!r} is not reachable")
+    if chi is None:
+        return BondChargeSectors(charges=list(charges), dims=[1] * len(charges))
+
+    ordered = sorted(charges, key=lambda q: (center(q), q))
+    tokens = [required]
+    for alpha in range(1, chi + 1):
+        for charge in ordered:
+            if alpha == 1 and charge == required:
+                continue
+            if capacities[charge] >= alpha:
+                tokens.append(charge)
+                if len(tokens) == chi:
+                    break
+        if len(tokens) == chi:
+            break
+    counts = {charge: tokens.count(charge) for charge in set(tokens)}
+    kept = sorted(counts)
+    return BondChargeSectors(
+        charges=kept,
+        dims=[counts[charge] for charge in kept],
+    )
+
+
+def _clip_to_bidirectional_graph(
+    sectors: list[BondChargeSectors],
+    local_charges: Sequence,
+) -> list[BondChargeSectors]:
+    """Clip channel multiplicities until every channel is reachable both ways."""
+
+    dims = [
+        {charge: int(dim) for charge, dim in zip(bond.charges, bond.dims)}
+        for bond in sectors
+    ]
+    changed = True
+    while changed:
+        changed = False
+        for i in range(1, len(dims)):
+            left = dims[i - 1]
+            for charge in list(dims[i]):
+                capacity = sum(
+                    multiplicity
+                    for q_left, multiplicity in left.items()
+                    for q_local in local_charges
+                    if _charge_add(q_left, q_local) == charge
+                )
+                new_dim = min(dims[i][charge], capacity)
+                if new_dim != dims[i][charge]:
+                    dims[i][charge] = new_dim
+                    changed = True
+        for i in range(len(dims) - 2, -1, -1):
+            right = dims[i + 1]
+            for charge in list(dims[i]):
+                capacity = sum(
+                    multiplicity
+                    for q_right, multiplicity in right.items()
+                    for q_local in local_charges
+                    if _charge_add(charge, q_local) == q_right
+                )
+                new_dim = min(dims[i][charge], capacity)
+                if new_dim != dims[i][charge]:
+                    dims[i][charge] = new_dim
+                    changed = True
+    clipped = []
+    for bond_dims in dims:
+        charges = sorted(q for q, dim in bond_dims.items() if dim > 0)
+        clipped.append(BondChargeSectors(
+            charges=charges,
+            dims=[bond_dims[q] for q in charges],
+        ))
+    if any(not bond.charges for bond in clipped):
+        raise ValueError("chi allocation disconnected the fixed-sector charge graph")
+    return clipped
 
 
 def build_spinless_bond_sectors(
@@ -67,6 +171,7 @@ def build_spinless_bond_sectors(
     target_n: int,
     chi: int | None = None,
     min_reachable: bool = True,
+    _required_path: Sequence[int] | None = None,
 ) -> list[BondChargeSectors]:
     """Build allowed cumulative particle numbers on all ``N+1`` MPS bonds."""
 
@@ -80,8 +185,21 @@ def build_spinless_bond_sectors(
             lo, hi = 0, target_n
         charges = list(range(lo, hi + 1))
         expected = target_n * i / N
-        charges = _trim_charges(charges, chi, lambda q: abs(q - expected))
-        sectors.append(BondChargeSectors(charges=charges))
+        capacities = {
+            q: min(comb(i, q), comb(N - i, target_n - q))
+            for q in charges
+        }
+        required = (
+            _required_path[i]
+            if _required_path is not None
+            else min(charges, key=lambda q: (abs(q - expected), q))
+        )
+        sectors.append(_allocate_channels(
+            charges, capacities, chi,
+            lambda q: abs(q - expected),
+            required,
+        ))
+    sectors = _clip_to_bidirectional_graph(sectors, [0, 1])
     if sectors[0].charges != [0]:
         raise ValueError("left boundary spinless charge sector must be [0]")
     if sectors[-1].charges != [target_n]:
@@ -95,6 +213,7 @@ def build_hubbard_bond_sectors(
     target_ndown: int,
     chi: int | None = None,
     min_reachable: bool = True,
+    _required_path: Sequence[tuple[int, int]] | None = None,
 ) -> list[BondChargeSectors]:
     """Build allowed cumulative ``(N_up, N_down)`` charges on all bonds."""
 
@@ -113,12 +232,26 @@ def build_hubbard_bond_sectors(
         charges = [(u, d) for u in range(up_lo, up_hi + 1) for d in range(dn_lo, dn_hi + 1)]
         exp_u = target_nup * i / N
         exp_d = target_ndown * i / N
-        charges = _trim_charges(
-            charges,
-            chi,
-            lambda q: abs(q[0] - exp_u) + abs(q[1] - exp_d),
+        capacities = {
+            (u, d): min(
+                comb(i, u) * comb(i, d),
+                comb(N - i, target_nup - u) * comb(N - i, target_ndown - d),
+            )
+            for u, d in charges
+        }
+        distance = lambda q: abs(q[0] - exp_u) + abs(q[1] - exp_d)
+        required = (
+            _required_path[i]
+            if _required_path is not None
+            else min(charges, key=lambda q: (distance(q), q))
         )
-        sectors.append(BondChargeSectors(charges=charges))
+        sectors.append(_allocate_channels(
+            charges, capacities, chi, distance, required,
+        )
+        )
+    meta = hubbard_charge_metadata()
+    local = list(zip(meta["n_up"], meta["n_down"]))
+    sectors = _clip_to_bidirectional_graph(sectors, local)
     if sectors[0].charges != [(0, 0)]:
         raise ValueError("left boundary Hubbard charge sector must be [(0, 0)]")
     if sectors[-1].charges != [(target_nup, target_ndown)]:
@@ -138,11 +271,12 @@ def spinless_tensor_charge_mask(
     if local_charges is None:
         local_charges = spinless_charge_metadata()["n"]
     mask = tc.zeros((len(left_charges), len(local_charges), len(right_charges)), dtype=tc.bool, device=device)
-    right_lookup = {q: b for b, q in enumerate(right_charges)}
+    right_lookup = {}
+    for b, q in enumerate(right_charges):
+        right_lookup.setdefault(q, []).append(b)
     for a, ql in enumerate(left_charges):
         for s, qs in enumerate(local_charges):
-            b = right_lookup.get(ql + qs)
-            if b is not None:
+            for b in right_lookup.get(ql + qs, []):
                 mask[a, s, b] = True
     return mask.to(dtype=dtype)
 
@@ -160,11 +294,12 @@ def hubbard_tensor_charge_mask(
         meta = hubbard_charge_metadata()
         local_charges = list(zip(meta["n_up"], meta["n_down"]))
     mask = tc.zeros((len(left_charges), len(local_charges), len(right_charges)), dtype=tc.bool, device=device)
-    right_lookup = {q: b for b, q in enumerate(right_charges)}
+    right_lookup = {}
+    for b, q in enumerate(right_charges):
+        right_lookup.setdefault(q, []).append(b)
     for a, (ul, dl) in enumerate(left_charges):
         for s, (us, ds) in enumerate(local_charges):
-            b = right_lookup.get((ul + us, dl + ds))
-            if b is not None:
+            for b in right_lookup.get((ul + us, dl + ds), []):
                 mask[a, s, b] = True
     return mask.to(dtype=dtype)
 
@@ -175,7 +310,12 @@ def build_spinless_masks(
 ) -> list[tc.Tensor]:
     local = spinless_charge_metadata()["n"]
     return [
-        spinless_tensor_charge_mask(bond_charges[i].charges, bond_charges[i + 1].charges, local, device=device)
+        spinless_tensor_charge_mask(
+            bond_charges[i].expanded_charges,
+            bond_charges[i + 1].expanded_charges,
+            local,
+            device=device,
+        )
         for i in range(len(bond_charges) - 1)
     ]
 
@@ -187,7 +327,12 @@ def build_hubbard_masks(
     meta = hubbard_charge_metadata()
     local = list(zip(meta["n_up"], meta["n_down"]))
     return [
-        hubbard_tensor_charge_mask(bond_charges[i].charges, bond_charges[i + 1].charges, local, device=device)
+        hubbard_tensor_charge_mask(
+            bond_charges[i].expanded_charges,
+            bond_charges[i + 1].expanded_charges,
+            local,
+            device=device,
+        )
         for i in range(len(bond_charges) - 1)
     ]
 
@@ -270,8 +415,8 @@ def sector_left_canonicalize(camps: ChargeAwareMPS) -> ChargeAwareMPS:
         for i in range(len(tensors) - 1):
             l, d, r = tensors[i].shape
             mat = tensors[i].reshape(l * d, r)
-            qleft = camps.bond_charges[i].charges
-            qright = camps.bond_charges[i + 1].charges
+            qleft = camps.bond_charges[i].expanded_charges
+            qright = camps.bond_charges[i + 1].expanded_charges
             qmat = tc.zeros_like(mat)
             residual = tc.zeros((r, r), dtype=mat.dtype, device=mat.device)
             for charge in dict.fromkeys(qright):
@@ -310,8 +455,8 @@ def sector_mixed_canonicalize(camps: ChargeAwareMPS, center: int) -> ChargeAware
             for i in range(center):
                 l, d, r = tensors[i].shape
                 mat = tensors[i].reshape(l * d, r)
-                qleft = camps.bond_charges[i].charges
-                qright = camps.bond_charges[i + 1].charges
+                qleft = camps.bond_charges[i].expanded_charges
+                qright = camps.bond_charges[i + 1].expanded_charges
                 qmat = tc.zeros_like(mat)
                 residual = tc.zeros((r, r), dtype=mat.dtype, device=mat.device)
                 for charge in dict.fromkeys(qright):
@@ -331,8 +476,8 @@ def sector_mixed_canonicalize(camps: ChargeAwareMPS, center: int) -> ChargeAware
         for i in range(len(tensors) - 1, center, -1):
             l, d, r = tensors[i].shape
             mat = tensors[i].reshape(l, d * r)
-            qleft = camps.bond_charges[i].charges
-            qright = camps.bond_charges[i + 1].charges
+            qleft = camps.bond_charges[i].expanded_charges
+            qright = camps.bond_charges[i + 1].expanded_charges
             bmat = tc.zeros_like(mat)
             residual = tc.zeros((l, l), dtype=mat.dtype, device=mat.device)
             for charge in dict.fromkeys(qleft):
@@ -378,41 +523,6 @@ def _charge_index(charges: Sequence, charge) -> int:
         raise ValueError(f"charge {charge!r} is not present in bond sectors {charges!r}") from exc
 
 
-def _preserve_required_path(bond_charges, required, chi: int | None, label: str) -> None:
-    """Ensure a requested product-state charge path survives chi trimming."""
-
-    for i, charge in enumerate(required):
-        charges = list(bond_charges[i].charges)
-        if charge in charges:
-            continue
-        if chi is not None and chi <= 0:
-            raise ValueError(f"chi must be positive when provided, got {chi}")
-        if chi is not None and len(charges) >= chi and chi < 1:
-            raise ValueError(
-                f"chi={chi} cannot represent requested {label} initialization "
-                f"path at bond {i}; required charge {charge!r}"
-            )
-        if len(charges) == 0:
-            raise ValueError(
-                f"no charge sectors remain at bond {i}; cannot represent "
-                f"requested {label} initialization path"
-            )
-        if chi is not None and len(charges) >= chi:
-            charges[-1] = charge
-        else:
-            charges.append(charge)
-        try:
-            bond_charges[i].charges = sorted(set(charges))
-        except TypeError:
-            bond_charges[i].charges = sorted(set(charges), key=lambda q: (q[0], q[1]))
-        if chi is not None and len(bond_charges[i].charges) > chi:
-            raise ValueError(
-                f"chi={chi} cannot represent requested {label} initialization "
-                f"path at bond {i}; required charge {charge!r} is absent from "
-                "the trimmed sectors"
-            )
-
-
 def _make_masked_random_tensors(
     masks: Sequence[tc.Tensor],
     dtype,
@@ -443,22 +553,23 @@ def spinless_hard_sector_product_mps(
 
     device = "cpu" if device is None else device
     dtype = tc.complex128 if dtype is None else dtype
-    bonds = build_spinless_bond_sectors(N, target_n, chi=chi)
     occupied = _choose_spinless_sites(N, target_n, pattern)
     required = [0]
     q_req = 0
     for i in range(N):
         q_req += 1 if i in occupied else 0
         required.append(q_req)
-    _preserve_required_path(bonds, required, chi, "spinless hard-sector")
+    bonds = build_spinless_bond_sectors(
+        N, target_n, chi=chi, _required_path=required
+    )
     masks = build_spinless_masks(bonds, device=device)
     tensors = _make_masked_random_tensors(masks, dtype=dtype, device=device)
     q = 0
     for i, tensor in enumerate(tensors):
         s = 1 if i in occupied else 0
-        a = _charge_index(bonds[i].charges, q)
+        a = _charge_index(bonds[i].expanded_charges, q)
         q_next = q + s
-        b = _charge_index(bonds[i + 1].charges, q_next)
+        b = _charge_index(bonds[i + 1].expanded_charges, q_next)
         tensor[a, s, b] = tensor[a, s, b] + 1.0
         q = q_next
     mps = MPS.from_tensors(tensors, dtype=dtype, device=device, requires_grad=False)
@@ -485,7 +596,6 @@ def hubbard_hard_sector_product_mps(
 
     device = "cpu" if device is None else device
     dtype = tc.complex128 if dtype is None else dtype
-    bonds = build_hubbard_bond_sectors(N, target_nup, target_ndown, chi=chi)
     up_sites, down_sites = _choose_hubbard_sets(N, target_nup, target_ndown, pattern)
     required = [(0, 0)]
     q_req = (0, 0)
@@ -493,7 +603,13 @@ def hubbard_hard_sector_product_mps(
         dq = (1 if i in up_sites else 0, 1 if i in down_sites else 0)
         q_req = (q_req[0] + dq[0], q_req[1] + dq[1])
         required.append(q_req)
-    _preserve_required_path(bonds, required, chi, "Hubbard hard-sector")
+    bonds = build_hubbard_bond_sectors(
+        N,
+        target_nup,
+        target_ndown,
+        chi=chi,
+        _required_path=required,
+    )
     masks = build_hubbard_masks(bonds, device=device)
     tensors = _make_masked_random_tensors(masks, dtype=dtype, device=device)
     q = (0, 0)
@@ -508,9 +624,9 @@ def hubbard_hard_sector_product_mps(
             s, dq = 2, (0, 1)
         else:
             s, dq = 0, (0, 0)
-        a = _charge_index(bonds[i].charges, q)
+        a = _charge_index(bonds[i].expanded_charges, q)
         q_next = (q[0] + dq[0], q[1] + dq[1])
-        b = _charge_index(bonds[i + 1].charges, q_next)
+        b = _charge_index(bonds[i + 1].expanded_charges, q_next)
         tensor[a, s, b] = tensor[a, s, b] + 1.0
         q = q_next
     mps = MPS.from_tensors(tensors, dtype=dtype, device=device, requires_grad=False)

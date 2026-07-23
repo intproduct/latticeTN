@@ -68,7 +68,7 @@ def solve(N, chi, steps, lr, seed, device="cpu", J=1.0, verbose=False):
     E0, _ = exact_ground_energy(H)
 
     _full_normalize(mps)
-    e_init = float(mps.energy_with_MPO(mpo))
+    e_init = float(mps.energy_with_MPO(mpo).detach())
 
     opt = tc.optim.Adam(mps.tensors, lr=lr)
     e_last = e_init

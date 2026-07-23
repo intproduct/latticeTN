@@ -22,6 +22,9 @@ def test_ad_two_site_dispatch_calls_two_site_train(monkeypatch):
             "final_bond_dims": [2, 2, 2],
             "max_bond": 2,
             "energy_history": [0.0, -1.0],
+            "best_energy": -1.0,
+            "best_step": 1,
+            "final_state_source": "best_mps",
             "optimizer_steps": 1,
             "closure_evals": 1,
         }

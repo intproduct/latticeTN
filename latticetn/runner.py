@@ -26,9 +26,12 @@ from .charge_sectors import (
 )
 from .sector_observables import (
     total_particle_number,
+    particle_number_variance,
     sector_leakage_report,
     total_nup,
     total_ndown,
+    variance_nup,
+    variance_ndown,
     hubbard_sector_leakage_report,
 )
 from .charges import local_number_operator, local_ntot_operator, local_sz_operator
@@ -37,6 +40,7 @@ from . import contractions as K
 from .ad_two_site import train_ad_two_site
 from .ad_variational import _project
 from . import canonical as Can
+from .numerics import real_if_hermitian, require_finite
 
 
 def parse_dtype(name: str) -> tc.dtype:
@@ -83,6 +87,10 @@ def _resolved_initialization(model: ModelSpec, method: MethodConfig) -> str:
     init = method.initialization or "auto"
     if init != "auto":
         return init
+    # Global AD cannot change Parameter shapes. It must therefore start on the
+    # requested MPS manifold instead of a bond-one product-state manifold.
+    if method.name in {"ad_global", "ad_dmrg"} and _sector_mode(model, method) != "hard":
+        return "random"
     if model.name in {"heisenberg", "tfi"}:
         return "neel"
     if model.name == "spinless_tv":
@@ -139,11 +147,13 @@ def _make_initial_mps(model: ModelSpec, method: MethodConfig, dtype, device) -> 
 
 
 def _energy(mps: MPS, mpo) -> tc.Tensor:
-    return K.rayleigh_energy_native(mps, mpo).real
+    return K.rayleigh_energy_native(mps, mpo)
 
 
 def _float(x: tc.Tensor) -> float:
-    return float(x.detach().real.cpu())
+    value = real_if_hermitian(x, name="reported scalar")
+    require_finite(value, name="reported scalar")
+    return float(value.detach().cpu())
 
 
 def _bond_dims(mps: MPS) -> list[int]:
@@ -197,7 +207,11 @@ def _sector_penalty(model: ModelSpec, method: MethodConfig, mps: MPS) -> tc.Tens
         lam = float(sector.get("lambda_n", 0.0))
         if target is None or lam == 0.0:
             return zero
-        return lam * (total_particle_number(mps, model="spinless") - float(target)) ** 2
+        mean = total_particle_number(mps, model="spinless")
+        return lam * (
+            particle_number_variance(mps, model="spinless")
+            + (mean - float(target)) ** 2
+        )
     if model.name == "hubbard":
         loss = zero
         nup = sector.get("target_nup")
@@ -205,9 +219,15 @@ def _sector_penalty(model: ModelSpec, method: MethodConfig, mps: MPS) -> tc.Tens
         lam_up = float(sector.get("lambda_nup", 0.0))
         lam_down = float(sector.get("lambda_ndown", 0.0))
         if nup is not None and lam_up != 0.0:
-            loss = loss + lam_up * (total_nup(mps) - float(nup)) ** 2
+            mean_up = total_nup(mps)
+            loss = loss + lam_up * (
+                variance_nup(mps) + (mean_up - float(nup)) ** 2
+            )
         if ndown is not None and lam_down != 0.0:
-            loss = loss + lam_down * (total_ndown(mps) - float(ndown)) ** 2
+            mean_down = total_ndown(mps)
+            loss = loss + lam_down * (
+                variance_ndown(mps) + (mean_down - float(ndown)) ** 2
+            )
         return loss
     return zero
 
@@ -308,6 +328,7 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
     initial_bond_dims = _bond_dims(mps)
     best_energy = initial_energy
     best_step = 0
+    best_tensors = [tensor.detach().clone() for tensor in mps.tensors]
     global_steps = int(method.global_steps or max(1, method.sweeps) * max(1, int(method.local_steps or 1)))
 
     def closure():
@@ -371,6 +392,7 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
         if energy < best_energy:
             best_energy = energy
             best_step = step
+            best_tensors = [tensor.detach().clone() for tensor in mps.tensors]
         rec = {
             "step": step,
             "sweep": step - 1,
@@ -386,6 +408,13 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
             rec["max_forbidden_abs"] = max_forbidden_abs(mps, camps.masks)
             rec["max_forbidden_grad_abs"] = max_forbidden_grad
         history.append(rec)
+    # Select the state that produced the reported best scalar. Observables and
+    # sector diagnostics are computed from this same restored state.
+    with tc.no_grad():
+        for tensor, best in zip(mps.tensors, best_tensors):
+            tensor.copy_(best)
+    if camps is not None:
+        apply_charge_masks_(mps, camps.masks)
     raw_norm_before_projection = _float(K.native_norm(mps))
     energy_before_final_projection = _float(_energy(mps, mpo))
     final_projection = "sector_canonical" if camps is not None else "canonical"
@@ -405,6 +434,12 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
             f"final physical MPS norm is {physical_norm_after_projection}, expected 1")
     if camps is not None and max_forbidden_abs(mps, camps.masks) != 0.0:
         raise RuntimeError("final hard-sector canonicalization produced forbidden amplitudes")
+    if abs(final_e - best_energy) > tol:
+        raise RuntimeError(
+            "restored best MPS does not reproduce best_energy: "
+            f"|{final_e} - {best_energy}| > {tol}"
+        )
+    best_energy = final_e
     if history:
         history[-1]["raw_norm_before_final_projection"] = raw_norm_before_projection
         history[-1]["state_norm"] = physical_norm_after_projection
@@ -425,6 +460,7 @@ def _run_ad(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtyp
             "final_gradient_norm": max_grad,
             "best_energy": best_energy,
             "best_step": best_step,
+            "final_state_source": "best_mps",
             "global_steps": global_steps,
             "optimizer_steps": optimizer_steps,
             "closure_evals": closure_evals,
@@ -517,8 +553,9 @@ def _run_ad_two_site(model: ModelSpec, method: MethodConfig, runtime: RuntimeCon
             "final_bond_dims": raw["final_bond_dims"],
             "chi_requested": method.chi,
             "initial_max_bond": max(initial_bond_dims) if initial_bond_dims else 1,
-            "best_energy": min(raw["energy_history"]),
-            "best_step": raw["energy_history"].index(min(raw["energy_history"])),
+            "best_energy": raw["best_energy"],
+            "best_step": raw["best_step"],
+            "final_state_source": raw["final_state_source"],
             "directional_sweeps": method.sweeps,
             "local_steps_per_bond": int(method.local_steps or 1),
             "optimizer_steps": raw["optimizer_steps"],
@@ -548,6 +585,8 @@ def _run_ad_two_site(model: ModelSpec, method: MethodConfig, runtime: RuntimeCon
 def _run_classical_dmrg(model: ModelSpec, method: MethodConfig, runtime: RuntimeConfig, dtype, device: str) -> dict:
     if model.name != "heisenberg":
         raise NotImplementedError("classical dmrg Stage 10 entry currently supports heisenberg only")
+    if method.sweeps < 1:
+        raise ValueError("classical DMRG requires sweeps >= 1")
     from .dmrg import two_site_sweep
 
     mpo = build_mpo(model, dtype=dtype, device=device)
@@ -579,7 +618,7 @@ def _run_classical_dmrg(model: ModelSpec, method: MethodConfig, runtime: Runtime
             "max_bond": _max_bond(mps_cur),
         })
     runtime_s = time.perf_counter() - t0
-    final_e = history[-1]["energy"] if history else float("nan")
+    final_e = history[-1]["energy"]
     return {
         "history": history,
         "summary": {

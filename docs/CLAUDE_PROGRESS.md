@@ -2049,3 +2049,89 @@ Current failing test or bottleneck:
 
 Next action:
 Perform the final requirement/diff audit, then commit and push Stage 12B.
+
+## Checkpoint Stage 12A-P0-01: Scientific Red-Line Repair
+
+Goal:
+Reproduce and repair the eight P0 scientific-compliance findings in the
+Stage 12A audit: hard-sector graph/degrees of freedom, soft-sector penalty,
+Global AD initialization, local-dimension geometry/RNG, normalized native
+observables, best-state consistency, and strict numerical failure handling.
+
+Files changed:
+- Added `latticetn/numerics.py` with finite, Hermiticity, positivity, and
+  truncation-error validation that distinguishes roundoff from invalid data.
+- Reworked `latticetn/charge_sectors.py` so each charge has explicit
+  degeneracy channels and all retained channels are bidirectionally reachable.
+- Corrected MPS bond geometry/RNG, normalized native observables, operator-square
+  soft penalties, requested-chi Global AD initialization, and best-MPS restore.
+- Added `tests/test_p0_scientific_compliance.py` and corrected legacy tests
+  whose assertions encoded the old unnormalized/repeated-RNG behavior.
+
+Commands run:
+- `python -m pytest -q tests/test_p0_scientific_compliance.py
+  tests/test_charge_sectors.py tests/test_charge_masks.py
+  tests/test_hard_sector_initializer_robustness.py
+  tests/test_stage12a_sector_canonical.py
+  tests/test_native_observable_contractions.py tests/test_sector_observables.py
+  tests/test_runner_algorithm_identity.py tests/test_mps_dense.py
+  tests/test_ad_two_site_split.py tests/test_ad_two_site_sweep_smoke.py`
+- `python scripts/validation_score.py --fast`
+
+Result:
+- The P0 red-line suite passes, including Hubbard `N=20` at
+  `chi=32,48,60,64,80,96`; every case canonicalizes, reaches the requested
+  center bond dimension, and is nested in the preceding variational space.
+- The combined focused suite passed after updating one mocked return schema.
+- Formal fast validation passed.
+
+Current failing test or bottleneck:
+- No focused or fast-validation failure. A full repository regression and
+  requirement-by-requirement documentation audit remain.
+
+Next action:
+Run the full CPU test suite, repair any newly exposed contract mismatch, then
+document the scientific basis, compatibility impact, and final evidence.
+
+## Checkpoint Stage 12A-P0-02: Full Compliance Audit
+
+Goal:
+Close the P0 repair with full CPU regression evidence, formal release gating,
+scientific references, historical-data policy, and reproducible report values.
+
+Files changed:
+- Added `docs/STAGE12A_P0_PHYSICS_COMPLIANCE.md` with the eight-item
+  finding/root-cause/repair/evidence matrix and primary references.
+- Added the P0 test module to `scripts/validation_score.py --fast`.
+- Updated repository status, documentation index, Stage 12A report, and the
+  numerical report; refreshed the N=2/4/6 variational table after the RNG fix.
+
+Commands run:
+- `python -m pytest -q -p no:cacheprovider`
+- `python scripts/validation_score.py --fast`
+- `python scripts/validation_score.py --full`
+- `python scripts/run_heisenberg_small.py --N 2 --chi 2 --steps 200 --lr 1e-2 --seed 0 --device cpu`
+- `python scripts/run_heisenberg_small.py --N 4 --chi 4 --steps 300 --lr 1e-2 --seed 0 --device cpu`
+- `python -m py_compile latticetn/*.py`
+- `git diff --check`
+
+Result:
+- Full CPU repository suite: PASS at 100%; opt-in GPU/environment cases
+  clean-skipped.
+- Formal fast and full validation: PASS.
+- Final post-documentation `python scripts/validation_score.py --fast`: PASS
+  after correcting a test-only indentation typo introduced during warning
+  cleanup.
+- N=2 error `1.94e-10`, N=4 error `6.44e-14`, N=6 error `2.17e-5`;
+  all remain above the exact ground energy and within protocol tolerances.
+- N=8 TDVP full-validation check retained fidelity `0.999999993776`.
+- Static audit found no remaining broad exception-to-NaN fallback,
+  unconditional clamp, or NaN-to-zero truncation cleaning in `latticetn/`.
+
+Current failing test or bottleneck:
+- None. Large production Hubbard/phase-diagram reruns are intentionally not
+  hidden in tests and remain a separately budgeted follow-up.
+
+Next action:
+Perform the final current-worktree validation and hand off the repaired,
+uncommitted changes with the historical-result caveats.

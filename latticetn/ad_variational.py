@@ -161,10 +161,7 @@ def _canonical_error(mps: MPS) -> float:
     This is a REPORT/diagnostic read (uses .detach internally in the Stage 3A
     helper), NOT part of the loss path.
     """
-    try:
-        return float(Can.left_orthonormal_all(mps))
-    except Exception:
-        return float("nan")
+    return float(Can.left_orthonormal_all(mps))
 
 
 def _state_norm(mps: MPS) -> float:

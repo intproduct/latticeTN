@@ -52,14 +52,14 @@ never falls below the exact ground energy.
 
 | N | chi | exact ground E0 | variational initial E | variational final E | absolute error | relative error | command                                                                                                       | pass/fail |
 |---|-----|-----------------|-----------------------|---------------------|----------------|----------------|---------------------------------------------------------------------------------------------------------------|-----------|
-| 2 | 2   | -0.7500000000   | -0.2502680197         | -0.7499999996       | 4.30e-10       | 5.73e-10       | `python scripts/run_heisenberg_small.py --N 2 --chi 2 --steps 200 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
-| 4 | 4   | -1.6160254038   | -0.0781043985         | -1.6160254038       | 3.99e-13       | 2.47e-13       | `python scripts/run_heisenberg_small.py --N 4 --chi 4 --steps 300 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
-| 6 | 8   | -2.4935771339   | -0.3862184141         | -2.4935714569       | 5.68e-06       | 2.28e-06       | `python scripts/run_heisenberg_small.py --N 6 --chi 8 --steps 300 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
+| 2 | 2   | -0.7500000000   | -0.0226460898         | -0.7499999998       | 1.94e-10       | 2.59e-10       | `python scripts/run_heisenberg_small.py --N 2 --chi 2 --steps 200 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
+| 4 | 4   | -1.6160254038   | -0.3684620285         | -1.6160254038       | 6.44e-14       | 3.98e-14       | `python scripts/run_heisenberg_small.py --N 4 --chi 4 --steps 300 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
+| 6 | 8   | -2.4935771339   | -0.3337416240         | -2.4935554092       | 2.17e-05       | 8.71e-06       | `python scripts/run_heisenberg_small.py --N 6 --chi 8 --steps 300 --lr 1e-2 --seed 0 --device cpu`           | PASS      |
 
 Notes:
 - N=4, chi=4 reaches `E0` to ~1e-13 (chi = 2^(N/2) is exact-representable and
   300 Adam steps fully converge).
-- N=6, chi=8 reaches `E0` to ~6e-6 in 300 steps (chi = 2^(N/2) is
+- N=6, chi=8 reaches `E0` to ~2.2e-5 in 300 steps (chi = 2^(N/2) is
   exact-representable; the residual is optimizer convergence, not an
   expressivity gap, and tightens with more steps).
 
@@ -73,7 +73,7 @@ pytest -q tests/test_reference_models.py tests/test_mps_dense.py tests/test_mpo_
        tests/test_tfi_mpo_dense.py tests/test_energy_rayleigh.py \
        tests/test_heisenberg_mpo_dense.py tests/test_heisenberg_energy_dense_compare.py \
        tests/test_heisenberg_variational_smoke.py
-# 62 passed
+# 69 passed
 ```
 
 `--full` additionally runs the small Heisenberg solve:
@@ -151,3 +151,21 @@ native MPO environments and a matrix-free Hermitian Lanczos exponential action.
 
 See `docs/STAGE12B_TDVP_REPORT.md` for the algorithm, complete validation table,
 API example, and limitations.
+
+# Stage 12A-P0 scientific compliance validation
+
+The eight P0 findings from the audit of commit `9d4c857` were reproduced and
+repaired. This gate covers symmetry-sector degeneracy and graph reachability,
+operator-square soft penalties, requested-chi Global AD initialization,
+local-dimension geometry and RNG behavior, normalized native observables,
+best-energy/best-state identity, and strict invalid-number handling.
+
+| Compliance check | Result | Command |
+|---|---|---|
+| Eight P0 red-line invariants, including Hubbard `N=20` at `chi=32,48,60,64,80,96` | PASS | `python -m pytest -q tests/test_p0_scientific_compliance.py` |
+| Full CPU repository regression | PASS (100%) | `python -m pytest -q -p no:cacheprovider` |
+| Formal fast validation including the P0 gate | PASS | `python scripts/validation_score.py --fast` |
+
+Historical hard-sector and Global AD benchmark files are not retroactively
+promoted. Their labeling/rerun policy and the finding-by-finding scientific
+evidence are recorded in `docs/STAGE12A_P0_PHYSICS_COMPLIANCE.md`.

@@ -15,6 +15,7 @@ from .charges import (
     local_ntot_operator,
     local_sz_operator,
 )
+from .numerics import nonnegative_if_roundoff, positive, real_if_hermitian
 
 
 def _additive_mpo(mps: MPS, local_op: tc.Tensor) -> MPO:
@@ -60,15 +61,27 @@ def _additive_square_mpo(mps: MPS, local_op: tc.Tensor) -> MPO:
 def additive_expectation(mps: MPS, local_op: tc.Tensor) -> tc.Tensor:
     """Return ``<sum_i op_i>`` as a differentiable scalar tensor."""
     mpo = _additive_mpo(mps, local_op)
-    return (mps._expect_MPO(mpo) / mps.overlap(mps)).real
+    den = positive(mps.overlap(mps), name="additive observable norm")
+    return real_if_hermitian(
+        mps._expect_MPO(mpo) / den,
+        name="additive observable expectation",
+    )
 
 
 def additive_variance(mps: MPS, local_op: tc.Tensor) -> tc.Tensor:
     """Return ``Var(sum_i op_i)`` as a differentiable scalar tensor."""
     q = additive_expectation(mps, local_op)
     q2_mpo = _additive_square_mpo(mps, local_op)
-    q2 = (mps._expect_MPO(q2_mpo) / mps.overlap(mps)).real
-    return tc.clamp(q2 - q * q, min=0.0)
+    den = positive(mps.overlap(mps), name="additive-square observable norm")
+    q2 = real_if_hermitian(
+        mps._expect_MPO(q2_mpo) / den,
+        name="additive-square observable expectation",
+    )
+    return nonnegative_if_roundoff(
+        q2 - q * q,
+        name="additive observable variance",
+        scale=tc.maximum(q2.abs(), (q * q).abs()),
+    )
 
 
 def _as_float(x: tc.Tensor) -> float:

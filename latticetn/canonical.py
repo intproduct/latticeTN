@@ -37,6 +37,7 @@ import math
 import torch as tc
 
 from .mps import MPS
+from .numerics import truncation_error
 
 
 # ---------------------------------------------------------------------------
@@ -304,12 +305,9 @@ def svd_compress(mps: "MPS", chi: int) -> tuple["MPS", dict]:
             k0 = S.shape[0]
             k = min(chi, k0)
             s2 = (S.real ** 2)
-            total = float(s2.sum())
-            if total > 0:
-                keep = float(s2[:k].sum())
-                trunc_err = (total - keep) / total
-            else:
-                trunc_err = 0.0
+            trunc_err = truncation_error(
+                s2, k, name=f"MPS compression bond {i}"
+            )
             trunc_errors.append(trunc_err)
             bond_dims.append(k)
             U = U[:, :k]

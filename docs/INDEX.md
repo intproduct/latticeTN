@@ -72,6 +72,7 @@ GitHub directly.
 | Stage 7A spinless fermion t-V | FERMION_SPEC | FERMION_PROTOCOL | FERMION_REPORT |
 | Stage 7B model builder + registry | MODEL_BUILDER_SPEC | MODEL_BUILDER_PROTOCOL | MODEL_BUILDER_REPORT |
 | Stage 7C spinful Hubbard | HUBBARD_SPEC | HUBBARD_PROTOCOL | HUBBARD_REPORT |
+| Stage 12A-P0 physics compliance | — | VALIDATION_PROTOCOL | STAGE12A_P0_PHYSICS_COMPLIANCE |
 | Stage 12B traditional TDVP | — | — | STAGE12B_TDVP_REPORT |
 | GPU readiness | GPU_TESTING_PROTOCOL | — | GPU_REPORT |
 

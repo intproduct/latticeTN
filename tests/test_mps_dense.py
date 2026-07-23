@@ -54,8 +54,8 @@ def test_mps_norm_matches_dense():
         for chi in [2, 4, 8]:
             mps = MPS(N, 2, chi, dtype=DTYPE)
             psi = mps.to_dense()
-            n_dense = float((psi.conj() @ psi).real)
-            n_mps = float(mps.norm_sq().real)
+            n_dense = float((psi.conj() @ psi).detach().real)
+            n_mps = float(mps.norm_sq().detach().real)
             assert abs(n_dense - n_mps) / max(1.0, n_dense) < 1e-10, (N, chi, n_dense, n_mps)
 
 
@@ -66,6 +66,6 @@ def test_mps_overlap_matches_dense():
     b = MPS(N, 2, 4, dtype=DTYPE)
     pa = a.to_dense()
     pb = b.to_dense()
-    ov_dense = float((pa.conj() @ pb))
-    ov_mps = complex(a.overlap(b))
+    ov_dense = complex((pa.conj() @ pb).detach())
+    ov_mps = complex(a.overlap(b).detach())
     assert abs(ov_dense - ov_mps) / max(1.0, abs(ov_dense)) < 1e-10, (ov_dense, ov_mps)

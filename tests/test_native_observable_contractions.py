@@ -29,7 +29,8 @@ def _make(seed=0):
 
 
 def _dense(mps: MPS) -> tc.Tensor:
-    return mps.to_dense().detach()
+    psi = mps.to_dense().detach()
+    return psi / tc.linalg.norm(psi)
 
 
 def test_native_local_sz_matches_dense():
@@ -38,7 +39,7 @@ def test_native_local_sz_matches_dense():
     ops = spin_operators()
     for site in range(mps.N):
         d = float(O.dense_expect_local(psi, ops["Sz"], site, mps.N).real)
-        n = float(K.native_local_expect(mps, ops["Sz"], site).real)
+        n = float(K.native_local_expect(mps, ops["Sz"], site).detach().real)
         assert abs(d - n) < 1e-9
 
 
@@ -48,7 +49,11 @@ def test_native_two_site_sz_matches_dense_including_ij_order():
     ops = spin_operators()
     for i, j in [(0, 1), (1, 3), (4, 2), (3, 5), (5, 0)]:
         d = complex(O.dense_expect_two_site(psi, ops["Sz"], i, ops["Sz"], j, mps.N)).real
-        n = float(K.native_two_site_expect(mps, ops["Sz"], i, ops["Sz"], j).real)
+        n = float(
+            K.native_two_site_expect(mps, ops["Sz"], i, ops["Sz"], j)
+            .detach()
+            .real
+        )
         assert abs(d - n) < 1e-9, (i, j, d, n)
 
 
@@ -59,7 +64,9 @@ def test_native_non_commuting_operator_order_preserved():
     ops = spin_operators()
     for i, j in [(1, 2), (2, 1)]:
         d = complex(O.dense_expect_two_site(psi, ops["S+"], i, ops["S-"], j, mps.N))
-        n = complex(K.native_two_site_expect(mps, ops["S+"], i, ops["S-"], j))
+        n = complex(
+            K.native_two_site_expect(mps, ops["S+"], i, ops["S-"], j).detach()
+        )
         assert abs(d - n) < 1e-9, (i, j, d, n)
 
 
@@ -68,7 +75,7 @@ def test_native_bond_energy_matches_dense():
     psi = _dense(mps)
     for i in range(mps.N - 1):
         d = float(O.dense_bond_energy_heisenberg(psi, i, mps.N))
-        n = float(K.native_bond_energy_heisenberg(mps, i))
+        n = float(K.native_bond_energy_heisenberg(mps, i).detach())
         assert abs(d - n) < 1e-9, (i, d, n)
 
 
@@ -78,5 +85,5 @@ def test_native_correlation_matches_dense():
     ops = spin_operators()
     for i, j in [(0, 2), (1, 4), (0, 5)]:
         d = complex(O.dense_expect_two_site(psi, ops["Sz"], i, ops["Sz"], j, mps.N)).real
-        n = float(K.native_correlation(mps, ops["Sz"], i, j).real)
+        n = float(K.native_correlation(mps, ops["Sz"], i, j).detach().real)
         assert abs(d - n) < 1e-9, (i, j, d, n)

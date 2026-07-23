@@ -35,7 +35,10 @@ selects the unit representative of the same physical ray.
 ## Hard-sector implementation
 
 `latticetn/charge_sectors.py` implements blockwise left and mixed QR sweeps.
-QR blocks are keyed by the virtual charge and never mix different charges:
+Following the Stage 12A-P0 repair, each virtual sector is `(q, alpha)` with
+explicit degeneracy `alpha=1,...,d_q`; `chi=sum_q d_q`, rather than the number
+of distinct charge labels. QR blocks are keyed by the virtual charge, mix
+degeneracy channels only within that charge, and never mix different charges:
 
 ```text
 spinless: q_right = q_left + n_s
@@ -116,6 +119,9 @@ gradient norm, ED overlap, and phase-aligned ED state distance.
   explicit and enabled by default for canonical retractions.
 - Hard-sector canonicalization currently supports exact QR only. Exact SVD is a
   dense diagnostic mode, not a charge-block production mode.
+- The representation is dense-with-masks rather than a memory-saving
+  block-sparse backend; the `(q,alpha)` variational structure is correct, but
+  block-sparse performance is not yet implemented.
 - Canonicalization is outside autograd. Stage 12B is deferred.
 - No large production benchmark was run as part of tests.
 - The local Torch build reports CUDA availability but cannot execute kernels on
